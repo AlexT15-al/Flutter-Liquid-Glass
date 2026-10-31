@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+import '../../features/awards/awards_page.dart';
 import '../../features/goals/presentation/goals_page.dart';
 import '../../features/nutrition/presentation/nutrition_tab.dart';
 import '../../features/plans/presentation/plans_tab.dart';
@@ -12,7 +13,6 @@ import '../../features/workout/presentation/workout_tab.dart';
 import '../../shared/widgets/account_glyph.dart';
 import '../../shared/widgets/bar_items.dart';
 import '../../shared/widgets/halo_page.dart';
-import '../../shared/widgets/placeholder_page.dart';
 import 'halo_tab.dart';
 import 'halo_tab_controller.dart';
 
@@ -85,8 +85,7 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
             glyph: const AccountGlyph(),
             onProfile: () => Navigator.of(context).push(ProfilePage.route()),
             onGoals: () => Navigator.of(context).push(GoalsPage.route()),
-            onAwards: () =>
-                Navigator.of(context).push(PlaceholderPage.route('Awards')),
+            onAwards: () => Navigator.of(context).push(AwardsPage.route()),
             onSettings: () => Navigator.of(context).push(SettingsPage.route()),
           ),
         ],

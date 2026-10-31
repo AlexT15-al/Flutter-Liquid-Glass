@@ -34,11 +34,6 @@ enum TodayCard {
     icon: CupertinoIcons.drop_fill,
     color: HaloColors.hydration,
   ),
-  heartRate(
-    title: 'Heart Rate',
-    icon: CupertinoIcons.heart_fill,
-    color: HaloColors.heart,
-  ),
   nutrition(
     title: 'Nutrition',
     icon: CupertinoIcons.chart_pie_fill,
@@ -78,7 +73,6 @@ enum TodayCard {
     TodayCard.distance,
     TodayCard.sleep,
     TodayCard.water,
-    TodayCard.heartRate,
     TodayCard.nutrition,
   ];
 }

@@ -193,7 +193,7 @@ class _TodayTabState extends State<TodayTab> {
     final counting = access == StepAccess.granted;
 
     return switch (card) {
-      TodayCard.readiness => ReadinessCard(onTap: open),
+      TodayCard.readiness => const ReadinessCard(),
       TodayCard.steps => MetricTile(
         title: card.title,
         icon: card.icon,
