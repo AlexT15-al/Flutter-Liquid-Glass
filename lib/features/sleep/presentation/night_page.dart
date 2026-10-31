@@ -6,6 +6,7 @@ import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../domain/sleep.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
@@ -32,24 +33,12 @@ class NightPage extends StatelessWidget {
       CupertinoPageRoute<void>(builder: (_) => NightPage(night: night));
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final delete = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('Delete This Night?'),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final delete = await confirmDestructive(
+      context,
+      title: 'Delete This Night?',
+      action: 'Delete',
     );
-    if (delete != true || !context.mounted) return;
+    if (!delete || !context.mounted) return;
     final id = night.id;
     if (id != null) await SleepScope.read(context).repository.delete(id);
     if (context.mounted) Navigator.of(context).pop();

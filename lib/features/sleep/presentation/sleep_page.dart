@@ -9,6 +9,7 @@ import '../../../app/theme/halo_metrics.dart';
 import '../../../domain/phone_use.dart';
 import '../../../domain/sleep.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/glass_action_button.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
@@ -545,25 +546,13 @@ class _TrackingCard extends StatelessWidget {
   }
 
   Future<void> _discard(BuildContext context) async {
-    final discard = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('Discard Tonight?'),
-        content: const Text('Tracking stops and nothing is kept.'),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Discard'),
-          ),
-        ],
-      ),
+    final discard = await confirmDestructive(
+      context,
+      title: 'Discard Tonight?',
+      message: 'Tracking stops and nothing is kept.',
+      action: 'Discard',
     );
-    if (discard == true) await controller.cancel();
+    if (discard) await controller.cancel();
   }
 
   @override

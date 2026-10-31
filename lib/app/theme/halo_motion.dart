@@ -64,6 +64,10 @@ abstract final class HaloMotion {
 
   static const pressCurve = Curves.easeOut;
 
+  /// An alert settling into place: fast at first, a long soft landing, the
+  /// way a critically damped spring arrives.
+  static const alertCurve = Cubic(0.18, 1.0, 0.32, 1.0);
+
   /// How far a card sinks under the finger.
   static const double pressScale = 0.97;
 

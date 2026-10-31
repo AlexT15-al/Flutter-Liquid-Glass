@@ -8,9 +8,13 @@ import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_glass.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../data/activity/step_tracker.dart';
+import '../../../data/transfer/data_transfer.dart';
 import '../../../domain/app_theme_mode.dart';
 import '../../../platform/android_permissions.dart';
+import '../../../platform/files.dart';
+import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
+import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
 import '../../goals/presentation/goals_page.dart';
@@ -89,11 +93,90 @@ class SettingsPage extends StatelessWidget {
             footer: true,
           ),
           const SizedBox(height: HaloMetrics.sectionTopGap),
+          const GroupCaption('Data'),
+          GroupedCard(
+            children: [
+              GroupedRow(title: 'Export Data', onTap: () => _export(context)),
+              GroupedRow(title: 'Import Data', onTap: () => _import(context)),
+            ],
+          ),
+          const GroupCaption(
+            'CSV files a spreadsheet opens: steps, workouts and routes, '
+            'sleep, food, water, weight, training and settings. Importing '
+            'adds what is not already here.',
+            footer: true,
+          ),
+          const SizedBox(height: HaloMetrics.sectionTopGap),
           const GroupedCard(
             children: [GroupedRow(title: 'Version', value: '1.0')],
           ),
         ],
       ),
+    );
+  }
+}
+
+Future<void> _export(BuildContext context) async {
+  final transfer = DataTransfer(HaloScope.databaseOf(context));
+  final now = DateTime.now();
+  final folder =
+      'Halo Export ${now.year}-${now.month.toString().padLeft(2, '0')}-'
+      '${now.day.toString().padLeft(2, '0')}';
+  try {
+    final files = await transfer.export();
+    final saved = await const SystemFiles().export(folder, files);
+    if (!saved || !context.mounted) return;
+    await showHaloAlert<void>(
+      context,
+      title: 'Data Exported',
+      message: '${files.length} CSV files are in “$folder”.',
+      actions: const [HaloAlertAction('OK', style: HaloAlertStyle.primary)],
+    );
+  } on Object catch (error) {
+    if (!context.mounted) return;
+    await showHaloAlert<void>(
+      context,
+      title: 'Couldn’t Export',
+      message: '$error',
+      actions: const [HaloAlertAction('OK', style: HaloAlertStyle.cancel)],
+    );
+  }
+}
+
+Future<void> _import(BuildContext context) async {
+  final transfer = DataTransfer(HaloScope.databaseOf(context));
+  try {
+    final files = await const SystemFiles().import();
+    if (files == null || files.isEmpty || !context.mounted) return;
+    final go = await showHaloAlert<bool>(
+      context,
+      title: 'Import ${files.length} ${files.length == 1 ? 'File' : 'Files'}?',
+      message:
+          'Entries that are not already in Halo are added. Settings in the '
+          'files replace the ones here.',
+      actions: const [
+        HaloAlertAction('Import', value: true, style: HaloAlertStyle.primary),
+        HaloAlertAction('Cancel', value: false, style: HaloAlertStyle.cancel),
+      ],
+    );
+    if (go != true) return;
+    final added = await transfer.import(files);
+    if (!context.mounted) return;
+    await showHaloAlert<void>(
+      context,
+      title: 'Data Imported',
+      message: added == 0
+          ? 'Everything in these files was already here.'
+          : '${Format.integer(added)} entries added.',
+      actions: const [HaloAlertAction('OK', style: HaloAlertStyle.primary)],
+    );
+  } on Object catch (error) {
+    if (!context.mounted) return;
+    await showHaloAlert<void>(
+      context,
+      title: 'Couldn’t Import',
+      message: '$error',
+      actions: const [HaloAlertAction('OK', style: HaloAlertStyle.cancel)],
     );
   }
 }

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_background">#FFFFFFFF</color>
+    <color name="widget_label">#FF000000</color>
+    <color name="widget_secondary">#99000000</color>
+
+    <string name="widget_description">Today\'s rings and steps.</string>
+    <string name="widget_rings">Activity rings</string>
+    <string name="widget_move">Move</string>
+    <string name="widget_exercise">Exercise</string>
+    <string name="widget_active_hours">Active Hours</string>
+
+    <style name="HaloWidgetLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/widget_secondary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="HaloWidgetValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

@@ -9,6 +9,7 @@ import 'app/halo_scope.dart';
 import 'app/theme/halo_glass.dart';
 import 'data/activity/activity_store.dart';
 import 'data/activity/step_tracker.dart';
+import 'data/activity/widget_sync.dart';
 import 'data/database/app_database.dart';
 import 'data/location/location_tracker.dart';
 import 'data/nutrition/nutrition_repository.dart';
@@ -62,6 +63,9 @@ Future<void> main() async {
   final themeMode = await preferences.readThemeMode();
   Haptics.enabled = await preferences.readHaptics();
   preferences.watchHaptics().listen((on) => Haptics.enabled = on);
+
+  // The home screen widget follows today's rings.
+  WidgetSync(activity).attach();
 
   // The workout on the lock screen, the status bar and the Now Bar.
   WorkoutLiveActivity(

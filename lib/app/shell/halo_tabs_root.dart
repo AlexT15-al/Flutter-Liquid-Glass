@@ -108,12 +108,6 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
       HaloTab.workout => WorkoutTab(titleController: title),
       HaloTab.nutrition => NutritionTab(titleController: title),
       HaloTab.plans => PlansTab(titleController: title),
-      HaloTab.health => TabPlaceholder(
-        titleController: title,
-        icon: tab.glyph,
-        title: tab.title,
-        message: 'Every category, Health Age and Medical ID.',
-      ),
     };
   }
 }

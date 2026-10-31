@@ -7,6 +7,7 @@ import '../../../app/theme/halo_metrics.dart';
 import '../../../domain/route.dart';
 import '../../../domain/workout.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
 import '../widgets/route_sections.dart';
@@ -22,25 +23,13 @@ class WorkoutDetailPage extends StatelessWidget {
   );
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final delete = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('Delete Workout?'),
-        content: const Text('Its minutes and energy leave your rings too.'),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final delete = await confirmDestructive(
+      context,
+      title: 'Delete Workout?',
+      message: 'Its minutes and energy leave your rings too.',
+      action: 'Delete',
     );
-    if (delete != true || !context.mounted) return;
+    if (!delete || !context.mounted) return;
     final id = workout.id;
     if (id != null) await HaloScope.workoutsOf(context).delete(id);
     if (context.mounted) Navigator.of(context).pop();

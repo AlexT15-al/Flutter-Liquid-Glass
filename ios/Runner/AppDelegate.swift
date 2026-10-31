@@ -2,11 +2,14 @@ import ActivityKit
 import CoreMotion
 import Flutter
 import UIKit
+import UniformTypeIdentifiers
+import WidgetKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let liveActivity = LiveActivityBridge()
   private let sleep = SleepBridge()
+  private let files = FilesBridge()
 
   override func application(
     _ application: UIApplication,
@@ -19,6 +22,28 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloLiveActivity") {
       liveActivity.attach(to: registrar.messenger())
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloFiles") {
+      files.attach(to: registrar.messenger())
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloWidget") {
+      FlutterMethodChannel(name: "halo/widget", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { call, result in
+          guard call.method == "update", let values = call.arguments as? [String: Any] else {
+            result(FlutterMethodNotImplemented)
+            return
+          }
+          // Shared with the widget extension through the App Group.
+          let suite = UserDefaults(suiteName: "group.com.halo.halo")
+          for (key, value) in values {
+            if let number = value as? NSNumber { suite?.set(number.doubleValue, forKey: key) }
+          }
+          suite?.set(Date().timeIntervalSince1970 * 1000, forKey: "updatedAt")
+          if #available(iOS 14.0, *) {
+            WidgetCenter.shared.reloadTimelines(ofKind: "HaloActivity")
+          }
+          result(nil)
+        }
     }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloSleep") {
       sleep.attach(to: registrar.messenger())
@@ -253,5 +278,96 @@ final class SleepBridge: NSObject, FlutterStreamHandler {
   func onCancel(withArguments arguments: Any?) -> FlutterError? {
     sink = nil
     return nil
+  }
+}
+
+// MARK: - Files
+
+/// `halo/files` on iOS: export writes a folder of CSV files and offers it to
+/// the Files app; import opens CSV files the user picks.
+final class FilesBridge: NSObject, UIDocumentPickerDelegate {
+  private var pending: FlutterResult?
+  private var exporting = false
+
+  func attach(to messenger: FlutterBinaryMessenger) {
+    FlutterMethodChannel(name: "halo/files", binaryMessenger: messenger)
+      .setMethodCallHandler { [weak self] call, result in
+        guard let self else { return }
+        guard self.pending == nil else {
+          result(FlutterError(code: "busy", message: "A file picker is open.", details: nil))
+          return
+        }
+        switch call.method {
+        case "export":
+          let args = call.arguments as? [String: Any] ?? [:]
+          let folder = args["folder"] as? String ?? "Halo Export"
+          let files = args["files"] as? [String: String] ?? [:]
+          self.export(folder: folder, files: files, result: result)
+        case "import":
+          self.pick(result: result)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+  }
+
+  private func presenter() -> UIViewController? {
+    let scene = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first { $0.activationState == .foregroundActive }
+    var top = scene?.windows.first { $0.isKeyWindow }?.rootViewController
+    while let next = top?.presentedViewController { top = next }
+    return top
+  }
+
+  private func export(folder: String, files: [String: String], result: @escaping FlutterResult) {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent(folder)
+    do {
+      try? FileManager.default.removeItem(at: dir)
+      try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+      for (name, content) in files {
+        try content.write(to: dir.appendingPathComponent(name), atomically: true, encoding: .utf8)
+      }
+    } catch {
+      result(FlutterError(code: "io", message: error.localizedDescription, details: nil))
+      return
+    }
+    let picker = UIDocumentPickerViewController(forExporting: [dir], asCopy: true)
+    picker.delegate = self
+    pending = result
+    exporting = true
+    presenter()?.present(picker, animated: true)
+  }
+
+  private func pick(result: @escaping FlutterResult) {
+    let picker = UIDocumentPickerViewController(
+      forOpeningContentTypes: [.commaSeparatedText, .plainText], asCopy: true)
+    picker.allowsMultipleSelection = true
+    picker.delegate = self
+    pending = result
+    exporting = false
+    presenter()?.present(picker, animated: true)
+  }
+
+  func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+    guard let result = pending else { return }
+    pending = nil
+    if exporting {
+      result(true)
+      return
+    }
+    var out: [String: String] = [:]
+    for url in urls {
+      if let text = try? String(contentsOf: url, encoding: .utf8) {
+        out[url.lastPathComponent] = text
+      }
+    }
+    result(out)
+  }
+
+  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+    guard let result = pending else { return }
+    pending = nil
+    result(exporting ? false : nil)
   }
 }

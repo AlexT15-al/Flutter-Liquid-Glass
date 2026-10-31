@@ -44,6 +44,8 @@ class HaloScope extends InheritedWidget {
     return scope!;
   }
 
+  static AppDatabase databaseOf(BuildContext context) => _of(context).database;
+
   static HaloPreferences preferencesOf(BuildContext context) =>
       _of(context).preferences;
 

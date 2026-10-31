@@ -3,7 +3,7 @@ import 'package:flutter/material.dart' show Icons;
 
 import '../../shared/widgets/rings_glyph.dart';
 
-/// The five destinations of the tab bar, in order.
+/// The four destinations of the tab bar, in order.
 ///
 /// The enum is the single source of truth for a tab's identity: its label, its
 /// page title and its glyph. Nothing else holds a tab index.
@@ -11,8 +11,7 @@ enum HaloTab {
   today(title: 'Today'),
   workout(title: 'Workout'),
   nutrition(title: 'Nutrition'),
-  plans(title: 'Plans'),
-  health(title: 'Health');
+  plans(title: 'Plans');
 
   const HaloTab({required this.title});
 
@@ -34,6 +33,5 @@ enum HaloTab {
     HaloTab.workout => const Icon(Icons.directions_run_rounded),
     HaloTab.nutrition => const Icon(Icons.restaurant_rounded),
     HaloTab.plans => const Icon(Icons.calendar_month_rounded),
-    HaloTab.health => const Icon(CupertinoIcons.heart_fill),
   };
 }

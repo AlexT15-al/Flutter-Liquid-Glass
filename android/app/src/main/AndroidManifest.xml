@@ -57,6 +57,17 @@
             android:name=".SleepService"
             android:exported="false"
             android:foregroundServiceType="health" />
+        <!-- The home screen widget: today's rings and steps. -->
+        <receiver
+            android:name=".ActivityWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_activity_info" />
+        </receiver>
         <receiver
             android:name=".WorkoutActionReceiver"
             android:exported="false" />

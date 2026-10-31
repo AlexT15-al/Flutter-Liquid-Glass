@@ -24,6 +24,7 @@ import io.flutter.plugin.common.MethodChannel
  */
 class MainActivity : FlutterActivity() {
     private var pendingResult: MethodChannel.Result? = null
+    private val files = FilesChannel(this)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -32,6 +33,15 @@ class MainActivity : FlutterActivity() {
         LiveActivityChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
         SleepChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
         ScreenHistoryChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
+        WidgetChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
+        files.attach(flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (files.onActivityResult(requestCode, resultCode, data)) return
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     /** A tap on the live workout notification: bring the workout up. */
