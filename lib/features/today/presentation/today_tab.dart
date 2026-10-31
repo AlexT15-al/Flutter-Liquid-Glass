@@ -9,6 +9,7 @@ import '../../../domain/activity_summary.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/hourly_bars.dart';
 import '../../../shared/widgets/placeholder_page.dart';
+import '../../activity/presentation/activity_page.dart';
 import '../domain/today_card.dart';
 import 'widgets/activity_card.dart';
 import 'widgets/metric_tile.dart';
@@ -94,7 +95,8 @@ class _TodayTabState extends State<TodayTab> {
               ActivityCard(
                 summary: summary,
                 goals: activity.goals,
-                onTap: () => _open('Activity'),
+                onTap: () =>
+                    Navigator.of(context).push(ActivityPage.route()),
               ),
               if (access != StepAccess.granted) ...[
                 const SizedBox(height: HaloMetrics.cardGap),

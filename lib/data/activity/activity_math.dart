@@ -23,7 +23,7 @@ abstract final class ActivityMath {
   static const double runningCadence = 140;
 
   /// Steps in an hour for it to count as an active hour.
-  static const int activeHourSteps = 250;
+  static const int activeHourSteps = ActivitySummary.activeHourThreshold;
 
   /// Net energy cost of walking, kcal per kilogram per kilometre, above
   /// resting. Close to flat across ordinary walking speeds.
@@ -48,6 +48,8 @@ abstract final class ActivityMath {
     final dayEnd = DateTime(day.year, day.month, day.day + 1);
 
     final hourly = List<double>.filled(24, 0);
+    final hourlyKcal = List<double>.filled(24, 0);
+    final hourlyExercise = List<double>.filled(24, 0);
     var steps = 0.0;
     var distanceKm = 0.0;
     var kcal = 0.0;
@@ -79,22 +81,23 @@ abstract final class ActivityMath {
           (running ? runningStrideFactor : 1.0);
       final km = spanSteps * stride / 1000;
 
-      steps += spanSteps;
-      distanceKm += km;
-      kcal += km *
+      final spanKcal = km *
           profile.weightKg *
           (running ? runningKcalPerKgKm : walkingKcalPerKgKm);
-      if (cadence >= exerciseCadence) {
-        exerciseMinutes += math.max(overlapMs, 0) / 60000;
-      }
+      final spanExercise =
+          cadence >= exerciseCadence ? math.max(overlapMs, 0) / 60000 : 0.0;
 
-      _distributeHourly(
-        hourly: hourly,
-        from: from,
-        to: overlapMs <= 0 ? from : to,
-        stepsPerMs: span.steps / durationMs,
-        lumpSteps: overlapMs <= 0 ? spanSteps : null,
-      );
+      steps += spanSteps;
+      distanceKm += km;
+      kcal += spanKcal;
+      exerciseMinutes += spanExercise;
+
+      // Everything in the span is spread over the clock hours it covers in
+      // proportion to time, so the hourly charts add up to the day's totals.
+      final until = overlapMs <= 0 ? from : to;
+      _spread(hourly, from, until, spanSteps);
+      _spread(hourlyKcal, from, until, spanKcal);
+      if (spanExercise > 0) _spread(hourlyExercise, from, until, spanExercise);
     }
 
     final hourlySteps = [for (final h in hourly) h.round()];
@@ -107,20 +110,23 @@ abstract final class ActivityMath {
       exerciseMinutes: exerciseMinutes,
       activeHours: hourlySteps.where((s) => s >= activeHourSteps).length,
       hourlySteps: hourlySteps,
+      hourlyKcal: List.unmodifiable(hourlyKcal),
+      hourlyExerciseMinutes: List.unmodifiable(hourlyExercise),
     );
   }
 
-  /// Spreads a span's steps over the clock hours it covers, in proportion to
-  /// time. A zero-length span drops its [lumpSteps] into its own hour.
-  static void _distributeHourly({
-    required List<double> hourly,
-    required DateTime from,
-    required DateTime to,
-    required double stepsPerMs,
-    double? lumpSteps,
-  }) {
-    if (lumpSteps != null) {
-      hourly[from.hour] += lumpSteps;
+  /// Adds [total] to [hourly], split over the clock hours between [from] and
+  /// [to] in proportion to the time spent in each. An instant puts it all in
+  /// its own hour.
+  static void _spread(
+    List<double> hourly,
+    DateTime from,
+    DateTime to,
+    double total,
+  ) {
+    final spanMs = to.difference(from).inMilliseconds;
+    if (spanMs <= 0) {
+      hourly[from.hour] += total;
       return;
     }
     var cursor = from;
@@ -129,7 +135,7 @@ abstract final class ActivityMath {
           DateTime(cursor.year, cursor.month, cursor.day, cursor.hour + 1);
       final segmentEnd = _earlier(nextHour, to);
       hourly[cursor.hour] +=
-          segmentEnd.difference(cursor).inMilliseconds * stepsPerMs;
+          total * segmentEnd.difference(cursor).inMilliseconds / spanMs;
       cursor = segmentEnd;
     }
   }

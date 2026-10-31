@@ -19,6 +19,8 @@ class ActivitySummary {
     required this.exerciseMinutes,
     required this.activeHours,
     required this.hourlySteps,
+    required this.hourlyKcal,
+    required this.hourlyExerciseMinutes,
   });
 
   /// Local midnight at the start of the day.
@@ -33,6 +35,21 @@ class ActivitySummary {
   /// Steps in each of the day's 24 hours, for the hourly charts.
   final List<int> hourlySteps;
 
+  /// Active energy in each hour, summing to [activeKcal].
+  final List<double> hourlyKcal;
+
+  /// Exercise minutes in each hour, summing to [exerciseMinutes].
+  final List<double> hourlyExerciseMinutes;
+
+  /// Whether each hour counted as active.
+  List<bool> get activeHourFlags => [
+        for (final steps in hourlySteps) steps >= activeHourThreshold,
+      ];
+
+  /// Steps in an hour for it to count as active. Mirrors
+  /// `ActivityMath.activeHourSteps`, which sets it.
+  static const int activeHourThreshold = 250;
+
   factory ActivitySummary.empty(DateTime day) => ActivitySummary(
         day: day,
         steps: 0,
@@ -41,5 +58,7 @@ class ActivitySummary {
         exerciseMinutes: 0,
         activeHours: 0,
         hourlySteps: List.filled(24, 0),
+        hourlyKcal: List.filled(24, 0),
+        hourlyExerciseMinutes: List.filled(24, 0),
       );
 }

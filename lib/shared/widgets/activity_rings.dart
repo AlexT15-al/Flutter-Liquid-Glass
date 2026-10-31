@@ -168,17 +168,27 @@ class _RingsPainter extends CustomPainter {
     const start = -math.pi / 2;
 
     final firstLap = math.min(progress, 1.0);
+    final sweep = 2 * math.pi * firstLap;
+
+    // Butt ends, with the caps drawn as circles of their own. A round cap on a
+    // sweep gradient takes its colour from the angle it sits at, and the start
+    // cap sits just before zero, where the gradient wraps to its brightest
+    // colour: the ring would begin with a bright nub instead of its dark end.
     final arc = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round
       ..shader = SweepGradient(
         colors: [dim, color],
         stops: const [0, 1],
-        endAngle: 2 * math.pi * firstLap,
+        endAngle: math.max(sweep, 0.0001),
         transform: const GradientRotation(start),
       ).createShader(rect);
-    canvas.drawArc(rect, start, 2 * math.pi * firstLap, false, arc);
+    Offset at(double angle) =>
+        centre + Offset(math.cos(angle), math.sin(angle)) * radius;
+    canvas
+      ..drawCircle(at(start), stroke / 2, Paint()..color = dim)
+      ..drawArc(rect, start, sweep, false, arc)
+      ..drawCircle(at(start + sweep), stroke / 2, Paint()..color = color);
 
     if (progress <= 1) return;
 

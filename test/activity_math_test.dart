@@ -97,4 +97,19 @@ void main() {
     );
     expect(s.steps, 0);
   });
+
+  test('hourly energy and exercise add up to the day totals', () {
+    final s = ActivityMath.summarize(
+      spans: [span(8, 40, 40, 4400), span(14, 0, 30, 900)],
+      day: day,
+      profile: profile,
+    );
+    final kcal = s.hourlyKcal.fold<double>(0, (a, b) => a + b);
+    final minutes = s.hourlyExerciseMinutes.fold<double>(0, (a, b) => a + b);
+    expect(kcal, closeTo(s.activeKcal, 1e-6));
+    expect(minutes, closeTo(s.exerciseMinutes, 1e-6));
+    expect(s.hourlyExerciseMinutes[8], closeTo(20, 1e-6));
+    expect(s.hourlyExerciseMinutes[9], closeTo(20, 1e-6));
+    expect(s.hourlyExerciseMinutes[14], 0);
+  });
 }
