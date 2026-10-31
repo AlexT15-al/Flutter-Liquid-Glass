@@ -23,6 +23,19 @@ class ActivityGoals {
 
   static const fallback = ActivityGoals();
 
+  ActivityGoals copyWith({
+    int? moveKcal,
+    int? exerciseMinutes,
+    int? activeHours,
+    int? steps,
+  }) =>
+      ActivityGoals(
+        moveKcal: moveKcal ?? this.moveKcal,
+        exerciseMinutes: exerciseMinutes ?? this.exerciseMinutes,
+        activeHours: activeHours ?? this.activeHours,
+        steps: steps ?? this.steps,
+      );
+
   Map<String, Object?> toJson() => {
         'moveKcal': moveKcal,
         'exerciseMinutes': exerciseMinutes,

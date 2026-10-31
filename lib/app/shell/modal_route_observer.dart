@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 
 /// Knows whether a modal presentation (a sheet, a dialog, an action sheet) is
@@ -48,4 +49,24 @@ class ModalRouteObserver extends NavigatorObserver {
     }
     _update();
   }
+}
+
+/// Hands [ModalRouteObserver.modalOnTop] to the pages under the Navigator,
+/// which dim themselves while a sheet is up.
+class ModalPresentationScope extends InheritedWidget {
+  const ModalPresentationScope({
+    super.key,
+    required this.modalOnTop,
+    required super.child,
+  });
+
+  final ValueListenable<bool> modalOnTop;
+
+  static ValueListenable<bool>? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<ModalPresentationScope>()
+      ?.modalOnTop;
+
+  @override
+  bool updateShouldNotify(ModalPresentationScope oldWidget) =>
+      modalOnTop != oldWidget.modalOnTop;
 }

@@ -3,7 +3,10 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../app/theme/halo_colors.dart';
 import '../../app/theme/halo_glass.dart';
+import '../../app/shell/modal_route_observer.dart';
 import '../../app/theme/halo_metrics.dart';
+import '../../app/theme/halo_motion.dart';
+import 'bar_items.dart';
 import 'transparent_system_bars.dart';
 
 /// Every screen's scaffold, configured once.
@@ -31,8 +34,40 @@ class HaloPage extends StatelessWidget {
 
   final Widget body;
 
+  /// How dark the page goes under a sheet: enough to set the sheet apart in
+  /// light mode, where page and sheet share a colour, without hiding what the
+  /// sheet was opened from.
+  static const double _sheetDim = 0.22;
+
   @override
   Widget build(BuildContext context) {
+    final modalOnTop = ModalPresentationScope.maybeOf(context);
+    final page = _buildScaffold(context);
+    if (modalOnTop == null) return page;
+
+    return Stack(
+      children: [
+        page,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: modalOnTop,
+              builder: (context, covered, _) => AnimatedOpacity(
+                opacity: covered ? 1 : 0,
+                duration: HaloMotion.of(context, HaloMotion.standardDuration),
+                curve: HaloMotion.standardCurve,
+                child: const ColoredBox(
+                  color: Color.fromRGBO(0, 0, 0, _sheetDim),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return TransparentSystemBars(
       child: GlassScaffold(
         background: ColoredBox(
@@ -70,14 +105,32 @@ GlassAppBar haloBar(
   List<GlassBarItem> actions = const [],
 }) {
   final label = HaloColors.labelOf(context);
+  // The package draws its automatic back chevron at a fixed 22pt, which in a
+  // 48pt circle looks lost. So the bar never uses the automatic one: a page
+  // that can go back gets this item instead, the same 48pt glass circle with a
+  // chevron sized to it, matched across routes by its id like any other item.
+  final canGoBack =
+      backButton && (ModalRoute.of(context)?.impliesAppBarDismissal ?? false);
 
   return GlassAppBar.pinned(
     toolbarHeight: HaloMetrics.toolbarHeight,
     buttonSize: HaloMetrics.barButtonSize,
     buttonSettings: HaloGlass.of(context),
-    backButton: backButton,
-    leading: leading,
-    leadingItemsSupplementBackButton: leading.isNotEmpty,
+    backButton: false,
+    leading: [
+      if (canGoBack)
+        GlassBarItem.icon(
+          id: BarItemIds.back,
+          label: 'Back',
+          background: GlassBarItemBackground.separate,
+          icon: const Icon(
+            CupertinoIcons.chevron_back,
+            size: HaloMetrics.barButtonSize * HaloMetrics.backGlyphRatio,
+          ),
+          onTap: () => Navigator.of(context).maybePop(),
+        ),
+      ...leading,
+    ],
     centerTitle: !largeTitle,
     padding: const EdgeInsets.symmetric(
       horizontal: HaloMetrics.cardPadding,

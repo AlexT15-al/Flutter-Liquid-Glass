@@ -1,5 +1,8 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../features/goals/presentation/goals_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
+import '../../features/settings/presentation/settings_page.dart';
 import '../../features/today/presentation/edit_today_sheet.dart';
 import '../../features/today/presentation/today_tab.dart';
 import '../../shared/widgets/bar_items.dart';
@@ -51,14 +54,12 @@ class HaloTabsRoot extends StatelessWidget {
             ),
           accountBarItem(
             context,
-            onProfile: () =>
-                Navigator.of(context).push(PlaceholderPage.route('Profile')),
-            onGoals: () =>
-                Navigator.of(context).push(PlaceholderPage.route('Goals')),
+            onProfile: () => Navigator.of(context).push(ProfilePage.route()),
+            onGoals: () => Navigator.of(context).push(GoalsPage.route()),
             onAwards: () =>
                 Navigator.of(context).push(PlaceholderPage.route('Awards')),
             onSettings: () =>
-                Navigator.of(context).push(PlaceholderPage.route('Settings')),
+                Navigator.of(context).push(SettingsPage.route()),
           ),
         ],
       ),

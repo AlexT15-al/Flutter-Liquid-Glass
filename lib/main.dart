@@ -35,8 +35,9 @@ Future<void> main() async {
   activity.attach(steps);
 
   // Awaited, so the first frame already has today's steps rather than empty
-  // rings that then jump.
+  // rings that then jump, and opens in the stored appearance.
   await activity.load();
+  final themeMode = await preferences.readThemeMode();
 
   // Not awaited: checking access and opening the sensor must not hold the
   // first frame. It never prompts; asking is a button on Today.
@@ -58,7 +59,7 @@ Future<void> main() async {
         // a tier mid-session, which on chrome that is always visible reads as
         // the app degrading. Premium is the requirement.
         adaptiveQuality: false,
-        child: const HaloApp(),
+        child: HaloApp(initialThemeMode: themeMode),
       ),
     ),
   );

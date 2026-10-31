@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../domain/activity_goals.dart';
+import '../../domain/app_theme_mode.dart';
 import '../../domain/body_profile.dart';
 import '../../features/today/domain/today_card.dart';
 import '../database/app_database.dart';
@@ -19,6 +20,20 @@ class HaloPreferences {
   static const _goalsKey = 'activity_goals';
   static const _todayCardsKey = 'today_cards';
   static const _stepCounterKey = 'step_counter';
+  static const _themeModeKey = 'theme_mode';
+
+  // ── Appearance ─────────────────────────────────────────────────────────────
+
+  Stream<AppThemeMode> watchThemeMode() => _db.watchValue(_themeModeKey).map(
+        (raw) => AppThemeMode.values.asNameMap()[raw] ?? AppThemeMode.system,
+      );
+
+  Future<AppThemeMode> readThemeMode() async =>
+      AppThemeMode.values.asNameMap()[await _db.readValue(_themeModeKey)] ??
+      AppThemeMode.system;
+
+  Future<void> setThemeMode(AppThemeMode mode) =>
+      _db.writeValue(_themeModeKey, mode.name);
 
   // ── Profile ────────────────────────────────────────────────────────────────
 

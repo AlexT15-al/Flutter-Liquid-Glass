@@ -13,6 +13,7 @@ import '../../app/theme/halo_metrics.dart';
 /// null, items are matched by position, which breaks as soon as one screen has
 /// a button the other does not.
 abstract final class BarItemIds {
+  static const back = 'back';
   static const account = 'account';
   static const edit = 'edit';
 }

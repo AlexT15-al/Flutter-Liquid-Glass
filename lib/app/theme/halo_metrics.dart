@@ -26,6 +26,10 @@ abstract final class HaloMetrics {
   /// Glyph size inside a bar button, as a share of its diameter.
   static const double barGlyphRatio = 0.46;
 
+  /// The back chevron. A chevron is a thin, open shape, so it needs more of
+  /// the circle than a filled glyph to carry the same weight.
+  static const double backGlyphRatio = 0.56;
+
   /// The account glyph is a filled circle, which reads smaller than a line
   /// glyph at the same size, so it gets more of the button.
   static const double accountGlyphRatio = 0.62;

@@ -49,6 +49,9 @@ abstract final class Format {
   static String shortWeekday(DateTime date) =>
       _weekdays[date.weekday - 1].substring(0, 3);
 
+  /// `October`.
+  static String monthName(DateTime date) => _months[date.month - 1];
+
   /// `M`, `T`, `W`…: the single letter over a day in a week strip.
   static String weekdayLetter(DateTime date) =>
       _weekdays[date.weekday - 1].substring(0, 1);

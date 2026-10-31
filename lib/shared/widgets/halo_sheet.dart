@@ -8,15 +8,13 @@ import '../../app/theme/halo_metrics.dart';
 /// Presents a sheet the way iOS 26 presents one, and the way Clock does.
 ///
 /// Flutter's own `showCupertinoSheet`: an opaque card that slides up from the
-/// bottom edge, drag to dismiss, and the page behind scaling back. That last
-/// part is what separates the sheet from the page, so the sheet needs no
-/// translucent material to read as lifted; it is solid, and its glass is the
-/// header buttons.
+/// bottom edge and drags down to dismiss. The page behind stays where it is.
+/// iOS 26 dropped the old zoom-out, where the page shrank back behind the
+/// sheet; here the page only dims (see `HaloPage`), which is what keeps the
+/// sheet distinct in light mode, where the two share a colour.
 ///
-/// The route keeps its own top gap. Passing a custom one switches off the
-/// page-behind transition altogether (Flutter only scales and dims the page
-/// for the default gap), and that transition is what makes the sheet read as
-/// lifted, in light mode most of all, where sheet and page share a colour.
+/// The sheet's top stops at the status bar. A custom top gap is also what
+/// turns the route's zoom-out off: Flutter only plays it for its own default.
 ///
 /// [nested] gives the sheet its own Navigator, so a page pushed from inside it
 /// slides across the sheet rather than covering it.
@@ -26,8 +24,10 @@ Future<T?> showHaloSheet<T>(
       builder,
   bool nested = false,
 }) {
+  final media = MediaQuery.of(context);
   return showCupertinoSheet<T>(
     context: context,
+    topGap: (media.padding.top / media.size.height).clamp(0.0, 0.9),
     useNestedNavigation: nested,
     scrollableBuilder: builder,
   );
@@ -211,7 +211,9 @@ class SheetConfirmButton extends StatelessWidget {
         label: label,
         width: HaloMetrics.barButtonSize,
         height: HaloMetrics.barButtonSize,
-        iconSize: HaloMetrics.barButtonSize * 0.5,
+        // Large and heavy, as the iOS sheet tick is: at the size of the
+        // other header glyphs it reads as a mark rather than as the action.
+        iconSize: HaloMetrics.barButtonSize * 0.62,
         iconColor: HaloColors.onAccent.resolveFrom(context),
         settings: HaloGlass.tinted(HaloColors.accent.resolveFrom(context)),
         quality: HaloGlass.quality,

@@ -5,15 +5,20 @@
 /// first launch and only get more accurate once the Profile page is filled in.
 class BodyProfile {
   const BodyProfile({
+    this.name,
     this.heightCm = 170,
     this.weightKg = 70,
-    this.birthYear,
+    this.birthDate,
     this.sex = BiologicalSex.unspecified,
   });
 
+  /// What the app calls the user. Optional; the account button shows initials
+  /// when there is one.
+  final String? name;
+
   final double heightCm;
   final double weightKg;
-  final int? birthYear;
+  final DateTime? birthDate;
   final BiologicalSex sex;
 
   /// The profile the app starts with.
@@ -30,17 +35,43 @@ class BodyProfile {
     return heightCm / 100 * factor;
   }
 
+  /// Age in whole years on [today], or null without a birth date.
+  int? ageOn(DateTime today) {
+    final born = birthDate;
+    if (born == null) return null;
+    final hadBirthday = today.month > born.month ||
+        (today.month == born.month && today.day >= born.day);
+    return today.year - born.year - (hadBirthday ? 0 : 1);
+  }
+
+  BodyProfile copyWith({
+    String? name,
+    double? heightCm,
+    double? weightKg,
+    DateTime? birthDate,
+    BiologicalSex? sex,
+  }) =>
+      BodyProfile(
+        name: name ?? this.name,
+        heightCm: heightCm ?? this.heightCm,
+        weightKg: weightKg ?? this.weightKg,
+        birthDate: birthDate ?? this.birthDate,
+        sex: sex ?? this.sex,
+      );
+
   Map<String, Object?> toJson() => {
+        'name': name,
         'heightCm': heightCm,
         'weightKg': weightKg,
-        'birthYear': birthYear,
+        'birthDate': birthDate?.toIso8601String(),
         'sex': sex.name,
       };
 
   factory BodyProfile.fromJson(Map<String, Object?> json) => BodyProfile(
+        name: json['name'] as String?,
         heightCm: (json['heightCm'] as num?)?.toDouble() ?? fallback.heightCm,
         weightKg: (json['weightKg'] as num?)?.toDouble() ?? fallback.weightKg,
-        birthYear: (json['birthYear'] as num?)?.toInt(),
+        birthDate: DateTime.tryParse(json['birthDate'] as String? ?? ''),
         sex: BiologicalSex.values.asNameMap()[json['sex']] ??
             BiologicalSex.unspecified,
       );
