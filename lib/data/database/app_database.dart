@@ -35,7 +35,27 @@ class KeyValues extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [StepIntervals, KeyValues])
+/// A finished workout.
+@TableIndex(name: 'workouts_start', columns: {#startMs})
+class Workouts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// `WorkoutType.name`.
+  TextColumn get type => text()();
+
+  IntColumn get startMs => integer()();
+  IntColumn get endMs => integer()();
+
+  /// Moving time, start to end less the pauses.
+  IntColumn get activeMs => integer()();
+
+  RealColumn get distanceKm => real()();
+  RealColumn get activeKcal => real()();
+  IntColumn get steps => integer()();
+  IntColumn get effort => integer().nullable()();
+}
+
+@DriftDatabase(tables: [StepIntervals, KeyValues, Workouts])
 class AppDatabase extends _$AppDatabase {
   /// Opened lazily: the file is not touched until the first query, so
   /// constructing this costs nothing at launch.
@@ -45,7 +65,18 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(workouts);
+            await m.createIndex(workoutsStart);
+          }
+        },
+      );
 
   // ── Steps ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +105,32 @@ class AppDatabase extends _$AppDatabase {
           ..orderBy([(t) => OrderingTerm.asc(t.startMs)]))
         .get();
   }
+
+  // ── Workouts ───────────────────────────────────────────────────────────────
+
+  Future<int> insertWorkout(WorkoutsCompanion workout) =>
+      into(workouts).insert(workout);
+
+  Future<void> deleteWorkout(int id) =>
+      (delete(workouts)..where((t) => t.id.equals(id))).go();
+
+  /// Workouts that started in `[from, to)`, newest first, as they change.
+  Stream<List<Workout>> watchWorkoutsBetween(DateTime from, DateTime to) {
+    final fromMs = from.millisecondsSinceEpoch;
+    final toMs = to.millisecondsSinceEpoch;
+    return (select(workouts)
+          ..where((t) =>
+              t.startMs.isBiggerOrEqualValue(fromMs) &
+              t.startMs.isSmallerThanValue(toMs))
+          ..orderBy([(t) => OrderingTerm.desc(t.startMs)]))
+        .watch();
+  }
+
+  /// The latest [limit] workouts, newest first.
+  Stream<List<Workout>> watchRecentWorkouts(int limit) => (select(workouts)
+        ..orderBy([(t) => OrderingTerm.desc(t.startMs)])
+        ..limit(limit))
+      .watch();
 
   // ── Key-value ──────────────────────────────────────────────────────────────
 

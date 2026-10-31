@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart'
     show ValueListenable, defaultTargetPlatform, TargetPlatform;
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+import '../../features/workout/live/workout_controller.dart';
+import '../../features/workout/live/workout_layer.dart';
+import '../../features/workout/live/workout_pill.dart';
 import '../theme/halo_colors.dart';
 import '../theme/halo_glass.dart';
 import '../theme/halo_metrics.dart';
@@ -49,17 +52,23 @@ class HaloChrome extends StatefulWidget {
   State<HaloChrome> createState() => _HaloChromeState();
 }
 
-class _HaloChromeState extends State<HaloChrome> {
+class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
   final FocusNode _searchFocusNode = FocusNode();
+
+  /// Measures the workout pill, so the live workout grows out of it and
+  /// shrinks back into it.
+  final GlobalKey _pillKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _searchFocusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchFocusNode
       ..removeListener(_onFocusChange)
       ..dispose();
@@ -70,6 +79,26 @@ class _HaloChromeState extends State<HaloChrome> {
     // A focus callback runs outside a build, so the scope is read without
     // registering a dependency.
     HaloTabScope.read(context).searchFieldFocused = _searchFocusNode.hasFocus;
+  }
+
+  /// Android's back button, caught before the Navigator sees it.
+  ///
+  /// The live workout is a layer above the Navigator, not a route, so neither
+  /// `PopScope` nor a back-button listener can reach it. Registered after the
+  /// Navigator's observer, this one is asked first: with the workout up, back
+  /// minimises it rather than popping the page underneath.
+  @override
+  Future<bool> didPopRoute() async {
+    final workouts = WorkoutScope.read(context);
+    if (!workouts.expanded) return false;
+    workouts.minimize();
+    return true;
+  }
+
+  Rect? _pillRect() {
+    final box = _pillKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
   }
 
   void _popToRoot() {
@@ -97,6 +126,7 @@ class _HaloChromeState extends State<HaloChrome> {
 
   Widget _buildLayers(BuildContext context) {
     final controller = HaloTabScope.of(context);
+    final workouts = WorkoutScope.of(context);
 
     return Stack(
       children: [
@@ -136,17 +166,27 @@ class _HaloChromeState extends State<HaloChrome> {
                 // The bar's indicator spring runs on its own; without a
                 // boundary every frame of it would mark the whole app dirty.
                 child: RepaintBoundary(
-                  child: _buildTabBar(context, controller),
+                  child: _buildTabBar(context, controller, workouts),
                 ),
               ),
             ),
           ),
         ),
+        // Above the tab bar, because the workout covers the chrome it grows
+        // out of. Nothing inside the Navigator can paint over the chrome.
+        Positioned.fill(
+          child: WorkoutLayer(controller: workouts, pillRect: _pillRect),
+        ),
       ],
     );
   }
 
-  Widget _buildTabBar(BuildContext context, HaloTabController controller) {
+  Widget _buildTabBar(
+    BuildContext context,
+    HaloTabController controller,
+    WorkoutController workouts,
+  ) {
+    final session = workouts.session;
     final accent = HaloColors.accent.resolveFrom(context);
     final label = HaloColors.labelOf(context);
 
@@ -160,6 +200,20 @@ class _HaloChromeState extends State<HaloChrome> {
         _popToRoot();
         controller.tab = next;
       },
+      // The workout in progress sits above the bar, the way Music keeps its
+      // mini player there. The bar animates the slot in and out.
+      bottomAccessory: session == null
+          ? null
+          : WorkoutPill(
+              key: _pillKey,
+              session: session,
+              height: HaloMetrics.accessoryHeight,
+              onOpen: workouts.expand,
+            ),
+      bottomAccessoryHeight: HaloMetrics.accessoryHeight,
+      // Hidden while the keyboard is up, so it never rides up into the field.
+      bottomAccessoryEnabled:
+          session != null && MediaQuery.viewInsetsOf(context).bottom == 0,
       barHeight: HaloMetrics.tabBarHeight,
       searchBarHeight: HaloMetrics.searchBarHeight,
       horizontalPadding: HaloMetrics.tabBarHorizontalPadding,

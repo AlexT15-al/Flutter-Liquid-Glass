@@ -5,6 +5,7 @@ import '../../features/profile/presentation/profile_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/today/presentation/edit_today_sheet.dart';
 import '../../features/today/presentation/today_tab.dart';
+import '../../features/workout/presentation/workout_tab.dart';
 import '../../shared/widgets/account_glyph.dart';
 import '../../shared/widgets/bar_items.dart';
 import '../../shared/widgets/halo_page.dart';
@@ -99,6 +100,9 @@ class HaloTabsRoot extends StatelessWidget {
     final tab = controller.tab;
     if (tab == HaloTab.today) {
       return const TodayTab(key: ValueKey(HaloTab.today));
+    }
+    if (tab == HaloTab.workout) {
+      return const WorkoutTab(key: ValueKey(HaloTab.workout));
     }
     return TabPlaceholder(
       key: ValueKey(tab),

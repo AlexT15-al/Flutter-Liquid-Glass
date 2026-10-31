@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:halo/data/activity/activity_math.dart';
 import 'package:halo/domain/activity_summary.dart';
 import 'package:halo/domain/body_profile.dart';
+import 'package:halo/domain/workout.dart';
 
 void main() {
   const profile = BodyProfile(heightCm: 180, weightKg: 80);
@@ -65,11 +66,7 @@ void main() {
 
   test('an hour with 250 steps or more is an active hour', () {
     final s = ActivityMath.summarize(
-      spans: [
-        span(7, 0, 30, 300),
-        span(12, 0, 30, 200),
-        span(18, 10, 20, 250),
-      ],
+      spans: [span(7, 0, 30, 300), span(12, 0, 30, 200), span(18, 10, 20, 250)],
       day: day,
       profile: profile,
     );
@@ -111,5 +108,57 @@ void main() {
     expect(s.hourlyExerciseMinutes[8], closeTo(20, 1e-6));
     expect(s.hourlyExerciseMinutes[9], closeTo(20, 1e-6));
     expect(s.hourlyExerciseMinutes[14], 0);
+  });
+
+  test('a workout fills exercise without counting brisk steps twice', () {
+    final start = DateTime(2026, 10, 31, 8);
+    final s = ActivityMath.summarize(
+      spans: [span(8, 0, 30, 3300)], // 110 steps/min, inside the workout
+      day: day,
+      profile: profile,
+      workouts: [
+        WorkoutRecord(
+          type: WorkoutType.outdoorWalk,
+          start: start,
+          end: start.add(const Duration(minutes: 30)),
+          activeDuration: const Duration(minutes: 30),
+          distanceKm: 2.4,
+          activeKcal: 120,
+          steps: 3300,
+        ),
+      ],
+    );
+    expect(s.exerciseMinutes, closeTo(30, 1e-6));
+    // A walk is already in the steps: its energy is not added again.
+    final stepsOnly = ActivityMath.summarize(
+      spans: [span(8, 0, 30, 3300)],
+      day: day,
+      profile: profile,
+    );
+    expect(s.activeKcal, closeTo(stepsOnly.activeKcal, 1e-6));
+  });
+
+  test('a workout the step counter cannot see adds its energy', () {
+    final start = DateTime(2026, 10, 31, 18);
+    final s = ActivityMath.summarize(
+      spans: const [],
+      day: day,
+      profile: profile,
+      workouts: [
+        WorkoutRecord(
+          type: WorkoutType.indoorCycle,
+          start: start,
+          end: start.add(const Duration(minutes: 40)),
+          activeDuration: const Duration(minutes: 40),
+          distanceKm: 0,
+          activeKcal: 300,
+          steps: 0,
+        ),
+      ],
+    );
+    expect(s.activeKcal, closeTo(300, 1e-6));
+    expect(s.exerciseMinutes, closeTo(40, 1e-6));
+    // Forty minutes in one hour makes it active without a single step.
+    expect(s.activeHours, 1);
   });
 }

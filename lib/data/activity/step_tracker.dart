@@ -76,6 +76,10 @@ class StepTracker with WidgetsBindingObserver {
 
   final ValueNotifier<StepAccess> access = ValueNotifier(StepAccess.unknown);
 
+  /// The latest raw reading of the cumulative counter, as it arrives. A live
+  /// workout counts its own steps from the difference.
+  final ValueNotifier<int?> latestCount = ValueNotifier(null);
+
   StreamSubscription<int>? _subscription;
   StepCounterReading? _stored;
   StepCounterReading? _latest;
@@ -130,7 +134,10 @@ class StepTracker with WidgetsBindingObserver {
   void _listen() {
     if (_subscription != null) return;
     _subscription = _counterStream().listen(
-      (count) => record(count, _clock()),
+      (count) {
+        latestCount.value = count;
+        record(count, _clock());
+      },
       onError: (Object error) {
         // No sensor at all is the one error worth showing; anything else is a
         // hiccup the next reading recovers from.
@@ -242,5 +249,6 @@ class StepTracker with WidgetsBindingObserver {
     if (latest != null) await _flush(upTo: latest);
     pending.dispose();
     access.dispose();
+    latestCount.dispose();
   }
 }

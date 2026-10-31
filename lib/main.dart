@@ -11,6 +11,8 @@ import 'data/activity/activity_store.dart';
 import 'data/activity/step_tracker.dart';
 import 'data/database/app_database.dart';
 import 'data/preferences/halo_preferences.dart';
+import 'data/workouts/workout_repository.dart';
+import 'features/workout/live/workout_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,9 +32,18 @@ Future<void> main() async {
 
   final database = AppDatabase();
   final preferences = HaloPreferences(database);
-  final activity = ActivityStore(database: database, preferences: preferences);
+  final workouts = WorkoutRepository(database);
+  final activity = ActivityStore(
+    database: database,
+    preferences: preferences,
+    workouts: workouts,
+  );
   final steps = StepTracker(preferences: preferences, onSpan: activity.addSpan);
   activity.attach(steps);
+  final workoutController = WorkoutController(
+    repository: workouts,
+    stepCounter: steps.latestCount,
+  );
 
   // Awaited, so the first frame already has today's steps rather than empty
   // rings that then jump, and opens in the stored appearance.
@@ -50,6 +61,7 @@ Future<void> main() async {
       preferences: preferences,
       activity: activity,
       steps: steps,
+      workouts: workouts,
       child: LiquidGlassWidgets.wrap(
         // The iOS 27 material, premium in both appearances. Brightness is
         // resolved at each glass widget's own context, so the variants follow
@@ -59,7 +71,12 @@ Future<void> main() async {
         // a tier mid-session, which on chrome that is always visible reads as
         // the app degrading. Premium is the requirement.
         adaptiveQuality: false,
-        child: HaloApp(initialThemeMode: themeMode),
+        // Above the app, beside the tab bar's state: the workout in progress
+        // outlives every route.
+        child: WorkoutScope(
+          controller: workoutController,
+          child: HaloApp(initialThemeMode: themeMode),
+        ),
       ),
     ),
   );

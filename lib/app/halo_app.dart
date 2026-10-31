@@ -2,12 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../domain/app_theme_mode.dart';
+import '../features/workout/live/workout_controller.dart';
 import 'halo_scope.dart';
 import 'shell/halo_chrome.dart';
 import 'shell/halo_tab_controller.dart';
 import 'shell/halo_tabs_root.dart';
 import 'shell/modal_route_observer.dart';
 import 'theme/halo_colors.dart';
+import 'theme/halo_metrics.dart';
 
 /// The root of the app.
 ///
@@ -62,11 +64,15 @@ class _HaloAppState extends State<HaloApp> {
       controller: _tabs,
       child: ModalPresentationScope(
         modalOnTop: _routes.modalOnTop,
-        child: StreamBuilder<AppThemeMode>(
-          stream: _themeMode,
-          initialData: widget.initialThemeMode,
-          builder: (context, snapshot) =>
-              _buildApp(snapshot.data ?? widget.initialThemeMode),
+        // Tells every page to leave room for the workout pill above the bar.
+        child: ChromeAccessoryScope(
+          showing: WorkoutScope.of(context).session != null,
+          child: StreamBuilder<AppThemeMode>(
+            stream: _themeMode,
+            initialData: widget.initialThemeMode,
+            builder: (context, snapshot) =>
+                _buildApp(snapshot.data ?? widget.initialThemeMode),
+          ),
         ),
       ),
     );

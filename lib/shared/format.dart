@@ -49,6 +49,34 @@ abstract final class Format {
   static String shortWeekday(DateTime date) =>
       _weekdays[date.weekday - 1].substring(0, 3);
 
+  /// A running clock: `4:07`, `12:34`, `1:02:09`.
+  static String clock(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    final seconds = duration.inSeconds % 60;
+    final ss = seconds.toString().padLeft(2, '0');
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:$ss';
+    }
+    return '$minutes:$ss';
+  }
+
+  /// A pace per kilometre: `5'42"`.
+  static String pace(Duration perKm) {
+    final minutes = perKm.inMinutes;
+    final seconds = perKm.inSeconds % 60;
+    return '$minutes\'${seconds.toString().padLeft(2, '0')}"';
+  }
+
+  /// A length of time in words: `45 min`, `1 hr 12 min`.
+  static String durationWords(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours == 0) return '$minutes min';
+    if (minutes == 0) return '$hours hr';
+    return '$hours hr $minutes min';
+  }
+
   /// `October`.
   static String monthName(DateTime date) => _months[date.month - 1];
 

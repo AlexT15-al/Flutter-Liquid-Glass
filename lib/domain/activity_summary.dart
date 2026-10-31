@@ -21,6 +21,7 @@ class ActivitySummary {
     required this.hourlySteps,
     required this.hourlyKcal,
     required this.hourlyExerciseMinutes,
+    required this.activeHourFlags,
   });
 
   /// Local midnight at the start of the day.
@@ -41,10 +42,8 @@ class ActivitySummary {
   /// Exercise minutes in each hour, summing to [exerciseMinutes].
   final List<double> hourlyExerciseMinutes;
 
-  /// Whether each hour counted as active.
-  List<bool> get activeHourFlags => [
-        for (final steps in hourlySteps) steps >= activeHourThreshold,
-      ];
+  /// Whether each hour counted as active: enough steps, or enough workout.
+  final List<bool> activeHourFlags;
 
   /// Steps in an hour for it to count as active. Mirrors
   /// `ActivityMath.activeHourSteps`, which sets it.
@@ -60,5 +59,6 @@ class ActivitySummary {
         hourlySteps: List.filled(24, 0),
         hourlyKcal: List.filled(24, 0),
         hourlyExerciseMinutes: List.filled(24, 0),
+        activeHourFlags: List.filled(24, false),
       );
 }

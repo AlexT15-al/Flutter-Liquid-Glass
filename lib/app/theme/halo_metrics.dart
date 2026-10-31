@@ -58,14 +58,20 @@ abstract final class HaloMetrics {
   static const double tabLabelSize = 10.0;
   static const double tabIconLabelSpacing = 2.0;
 
+  /// The pill above the tab bar: a workout in progress.
+  static const double accessoryHeight = 50.0;
+
   /// Empty space a page leaves at its bottom so its last row clears the
-  /// floating tab bar. iOS floats the bar over the home indicator; Android's
-  /// three-button navigation is opaque and has to be cleared as well.
+  /// floating tab bar, and the pill above it while a workout runs. iOS floats
+  /// the bar over the home indicator; Android's three-button navigation is
+  /// opaque and has to be cleared as well.
   static double bottomInset(BuildContext context) {
     final isApple = defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
     final system = isApple ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
-    return tabBarHeight + 2 * tabBarVerticalPadding + 16 + system;
+    final accessory =
+        ChromeAccessoryScope.isShowing(context) ? accessoryHeight + 8 : 0.0;
+    return tabBarHeight + 2 * tabBarVerticalPadding + 16 + system + accessory;
   }
 
   // ── Page ───────────────────────────────────────────────────────────────────
@@ -105,4 +111,28 @@ abstract final class HaloMetrics {
 
   /// Gap between a sheet's header row and its first content.
   static const double sheetHeaderGap = 12.0;
+}
+
+/// Whether the tab bar is carrying its accessory, so pages leave room for it.
+///
+/// Its own small scope rather than a dependency on the workout feature: the
+/// metrics only need to know that something sits above the bar.
+class ChromeAccessoryScope extends InheritedWidget {
+  const ChromeAccessoryScope({
+    super.key,
+    required this.showing,
+    required super.child,
+  });
+
+  final bool showing;
+
+  static bool isShowing(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<ChromeAccessoryScope>()
+          ?.showing ??
+      false;
+
+  @override
+  bool updateShouldNotify(ChromeAccessoryScope oldWidget) =>
+      showing != oldWidget.showing;
 }

@@ -4,6 +4,7 @@ import '../data/activity/activity_store.dart';
 import '../data/activity/step_tracker.dart';
 import '../data/database/app_database.dart';
 import '../data/preferences/halo_preferences.dart';
+import '../data/workouts/workout_repository.dart';
 
 /// Hands the app's long-lived services down the tree.
 ///
@@ -21,6 +22,7 @@ class HaloScope extends InheritedWidget {
     required this.preferences,
     required this.activity,
     required this.steps,
+    required this.workouts,
     required super.child,
   });
 
@@ -28,6 +30,7 @@ class HaloScope extends InheritedWidget {
   final HaloPreferences preferences;
   final ActivityStore activity;
   final StepTracker steps;
+  final WorkoutRepository workouts;
 
   static HaloScope _of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<HaloScope>();
@@ -43,10 +46,14 @@ class HaloScope extends InheritedWidget {
 
   static StepTracker stepsOf(BuildContext context) => _of(context).steps;
 
+  static WorkoutRepository workoutsOf(BuildContext context) =>
+      _of(context).workouts;
+
   @override
   bool updateShouldNotify(HaloScope oldWidget) =>
       database != oldWidget.database ||
       preferences != oldWidget.preferences ||
       activity != oldWidget.activity ||
-      steps != oldWidget.steps;
+      steps != oldWidget.steps ||
+      workouts != oldWidget.workouts;
 }

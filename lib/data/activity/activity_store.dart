@@ -6,7 +6,9 @@ import '../../domain/activity_goals.dart';
 import '../../domain/activity_summary.dart';
 import '../../domain/body_profile.dart';
 import '../database/app_database.dart';
+import '../../domain/workout.dart';
 import '../preferences/halo_preferences.dart';
+import '../workouts/workout_repository.dart';
 import 'activity_math.dart';
 import 'step_tracker.dart';
 
@@ -23,12 +25,14 @@ class ActivityStore extends ChangeNotifier {
   ActivityStore({
     required AppDatabase database,
     required this._preferences,
+    required this._workouts,
     DateTime Function()? clock,
   })  : _db = database,
         _clock = clock ?? DateTime.now;
 
   final AppDatabase _db;
   final HaloPreferences _preferences;
+  final WorkoutRepository _workouts;
   final DateTime Function() _clock;
 
   /// How many days of spans are kept in memory, today included.
@@ -38,6 +42,7 @@ class ActivityStore extends ChangeNotifier {
   static const _liveRefresh = Duration(milliseconds: 500);
 
   final List<StepSpan> _spans = [];
+  List<WorkoutRecord> _workoutRecords = const [];
   StepTracker? _tracker;
 
   BodyProfile _profile = BodyProfile.fallback;
@@ -75,6 +80,14 @@ class ActivityStore extends ChangeNotifier {
       }))
       ..add(_preferences.watchGoals().listen((value) {
         _goals = value;
+        _changed();
+      }))
+      // Saved workouts fill the rings too. Followed rather than read once, so
+      // a workout saved or deleted shows on Today at once.
+      ..add(_workouts
+          .watchBetween(from, DateTime(now.year + 1, now.month, now.day))
+          .listen((value) {
+        _workoutRecords = value;
         _changed();
       }));
 
@@ -115,6 +128,7 @@ class ActivityStore extends ChangeNotifier {
       spans: open == null ? _spans : [..._spans, open],
       day: key,
       profile: _profile,
+      workouts: _workoutRecords,
     );
     _memo[key] = (_version, summary);
     return summary;

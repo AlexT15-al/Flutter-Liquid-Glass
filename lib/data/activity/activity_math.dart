@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../../domain/activity_summary.dart';
 import '../../domain/body_profile.dart';
+import '../../domain/workout.dart';
 
 /// Turns counted steps into the day's activity numbers.
 ///
@@ -35,12 +36,24 @@ abstract final class ActivityMath {
   /// A running stride is longer than a walking one for the same person.
   static const double runningStrideFactor = 1.3;
 
-  /// Summarises [day] (any moment in it) from [spans], which may start before
-  /// or end after the day: only the part inside the day counts.
+  /// Minutes of workout in an hour for it to count as active, whatever the
+  /// step count: a ride or a yoga session barely moves the step counter.
+  static const double activeHourWorkoutMinutes = 5;
+
+  /// Summarises [day] (any moment in it) from [spans] and [workouts], which
+  /// may start before or end after the day: only the part inside it counts.
+  ///
+  /// Workouts and steps overlap, and nothing is counted twice:
+  ///
+  /// - **Exercise:** a workout's moving time counts in full; brisk walking
+  ///   found in the steps counts only outside workouts.
+  /// - **Move:** walking and running workouts are already in the steps, so
+  ///   only the energy of workouts the step counter cannot see is added.
   static ActivitySummary summarize({
     required Iterable<StepSpan> spans,
     required DateTime day,
     required BodyProfile profile,
+    Iterable<WorkoutRecord> workouts = const [],
   }) {
     final dayStart = DateTime(day.year, day.month, day.day);
     // The next midnight by calendar, not by adding 24 hours: a day that
@@ -54,6 +67,33 @@ abstract final class ActivityMath {
     var distanceKm = 0.0;
     var kcal = 0.0;
     var exerciseMinutes = 0.0;
+    final hourlyWorkout = List<double>.filled(24, 0);
+
+    // Each workout's part of the day, and the share of it that was moving
+    // rather than paused.
+    final windows = <(DateTime, DateTime, WorkoutRecord)>[];
+    for (final workout in workouts) {
+      final from = _later(workout.start, dayStart);
+      final to = _earlier(workout.end, dayEnd);
+      if (!to.isAfter(from)) continue;
+      windows.add((from, to, workout));
+
+      final totalMs = math.max(
+        workout.end.difference(workout.start).inMilliseconds,
+        1,
+      );
+      final share = to.difference(from).inMilliseconds / totalMs;
+      final minutes = workout.activeDuration.inMilliseconds / 60000 * share;
+
+      exerciseMinutes += minutes;
+      _spread(hourlyExercise, from, to, minutes);
+      _spread(hourlyWorkout, from, to, minutes);
+      if (!workout.type.steps) {
+        final energy = workout.activeKcal * share;
+        kcal += energy;
+        _spread(hourlyKcal, from, to, energy);
+      }
+    }
 
     for (final span in spans) {
       if (span.steps <= 0) continue;
@@ -77,15 +117,24 @@ abstract final class ActivityMath {
       final running = cadence >= runningCadence;
 
       final spanSteps = span.steps * share;
-      final stride = profile.walkingStrideMeters *
-          (running ? runningStrideFactor : 1.0);
+      final stride =
+          profile.walkingStrideMeters * (running ? runningStrideFactor : 1.0);
       final km = spanSteps * stride / 1000;
 
-      final spanKcal = km *
+      final spanKcal =
+          km *
           profile.weightKg *
           (running ? runningKcalPerKgKm : walkingKcalPerKgKm);
-      final spanExercise =
-          cadence >= exerciseCadence ? math.max(overlapMs, 0) / 60000 : 0.0;
+      // Brisk minutes inside a workout are already the workout's.
+      final insideWorkouts = cadence >= exerciseCadence
+          ? windows.fold<int>(
+              0,
+              (sum, w) => sum + _overlapMs(from, to, w.$1, w.$2),
+            )
+          : 0;
+      final spanExercise = cadence >= exerciseCadence
+          ? math.max(overlapMs - insideWorkouts, 0) / 60000
+          : 0.0;
 
       steps += spanSteps;
       distanceKm += km;
@@ -101,6 +150,11 @@ abstract final class ActivityMath {
     }
 
     final hourlySteps = [for (final h in hourly) h.round()];
+    final activeFlags = [
+      for (var h = 0; h < 24; h++)
+        hourlySteps[h] >= activeHourSteps ||
+            hourlyWorkout[h] >= activeHourWorkoutMinutes,
+    ];
 
     return ActivitySummary(
       day: dayStart,
@@ -108,8 +162,9 @@ abstract final class ActivityMath {
       distanceKm: distanceKm,
       activeKcal: kcal,
       exerciseMinutes: exerciseMinutes,
-      activeHours: hourlySteps.where((s) => s >= activeHourSteps).length,
+      activeHours: activeFlags.where((active) => active).length,
       hourlySteps: hourlySteps,
+      activeHourFlags: List.unmodifiable(activeFlags),
       hourlyKcal: List.unmodifiable(hourlyKcal),
       hourlyExerciseMinutes: List.unmodifiable(hourlyExercise),
     );
@@ -131,13 +186,23 @@ abstract final class ActivityMath {
     }
     var cursor = from;
     while (cursor.isBefore(to)) {
-      final nextHour =
-          DateTime(cursor.year, cursor.month, cursor.day, cursor.hour + 1);
+      final nextHour = DateTime(
+        cursor.year,
+        cursor.month,
+        cursor.day,
+        cursor.hour + 1,
+      );
       final segmentEnd = _earlier(nextHour, to);
       hourly[cursor.hour] +=
           total * segmentEnd.difference(cursor).inMilliseconds / spanMs;
       cursor = segmentEnd;
     }
+  }
+
+  static int _overlapMs(DateTime a0, DateTime a1, DateTime b0, DateTime b1) {
+    final from = _later(a0, b0);
+    final to = _earlier(a1, b1);
+    return math.max(to.difference(from).inMilliseconds, 0);
   }
 
   static DateTime _later(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
