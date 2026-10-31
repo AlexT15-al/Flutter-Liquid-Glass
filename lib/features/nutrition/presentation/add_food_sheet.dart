@@ -6,12 +6,15 @@ import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_glass.dart';
 import '../../../app/theme/halo_metrics.dart';
+import '../../../data/nutrition/open_food_facts.dart';
 import '../../../domain/food_catalog.dart';
 import '../../../domain/nutrition.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
+import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_sheet.dart';
+import 'scanner_page.dart';
 
 /// A food at one portion: from the catalogue, or something logged before.
 class _Choice {
@@ -132,6 +135,47 @@ class _AddFoodSheetState extends State<_AddFoodSheet> {
     return FoodEntry(time: DateTime.now(), meal: _meal, name: name, kcal: kcal);
   }
 
+  bool _scanning = false;
+
+  /// The camera, then Open Food Facts; the product found becomes the choice.
+  Future<void> _scan() async {
+    final facts = OpenFoodFacts(HaloScope.databaseOf(context));
+    final code = await Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(ScannerPage.route());
+    if (code == null || !mounted) return;
+    setState(() => _scanning = true);
+    try {
+      final item = await facts.lookup(code);
+      if (!mounted) return;
+      if (item == null) {
+        await showHaloAlert<void>(
+          context,
+          title: 'Not Found',
+          message:
+              'Barcode $code isn’t in Open Food Facts yet. Type the food’s '
+              'name to add it by hand.',
+          actions: const [HaloAlertAction('OK', style: HaloAlertStyle.primary)],
+        );
+      } else {
+        _pick(_Choice.item(item));
+      }
+    } on Object {
+      if (!mounted) return;
+      await showHaloAlert<void>(
+        context,
+        title: 'No Connection',
+        message:
+            'Looking a barcode up the first time needs the internet. Try '
+            'again when you are online.',
+        actions: const [HaloAlertAction('OK', style: HaloAlertStyle.primary)],
+      );
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
+  }
+
   void _pick(_Choice choice) {
     HapticFeedback.selectionClick();
     FocusManager.instance.primaryFocus?.unfocus();
@@ -202,6 +246,20 @@ class _AddFoodSheetState extends State<_AddFoodSheet> {
               context,
             ).style.copyWith(color: HaloColors.labelOf(context), fontSize: 17),
             onChanged: (_) => setState(() => _custom = false),
+          ),
+          const SizedBox(height: HaloMetrics.cardGap),
+          GroupedCard(
+            children: [
+              GroupedRow(
+                title: _scanning ? 'Looking It Up…' : 'Scan Barcode',
+                leading: Icon(
+                  CupertinoIcons.barcode_viewfinder,
+                  size: 22,
+                  color: HaloColors.accent.resolveFrom(context),
+                ),
+                onTap: _scanning ? null : _scan,
+              ),
+            ],
           ),
           const SizedBox(height: HaloMetrics.cardGap),
           if (_custom)

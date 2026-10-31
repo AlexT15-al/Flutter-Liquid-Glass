@@ -22,6 +22,7 @@ import '../../sleep/presentation/sleep_page.dart';
 import '../../sleep/presentation/widgets/hypnogram.dart';
 import '../../sleep/sleep_controller.dart';
 import '../domain/today_card.dart';
+import 'steps_page.dart';
 import 'widgets/activity_card.dart';
 import 'widgets/metric_tile.dart';
 import 'widgets/readiness_card.dart';
@@ -208,7 +209,7 @@ class _TodayTabState extends State<TodayTab> {
           trackColor: HaloColors.fill.resolveFrom(context),
           upToHour: now.hour,
         ),
-        onTap: open,
+        onTap: () => Navigator.of(context).push(StepsPage.route()),
       ),
       TodayCard.distance => MetricTile(
         title: card.title,
@@ -223,7 +224,7 @@ class _TodayTabState extends State<TodayTab> {
           trackColor: HaloColors.fill.resolveFrom(context),
           upToHour: now.hour,
         ),
-        onTap: open,
+        onTap: () => Navigator.of(context).push(StepsPage.route()),
       ),
       TodayCard.sleep => _SleepTile(card: card, color: color),
       TodayCard.water ||
