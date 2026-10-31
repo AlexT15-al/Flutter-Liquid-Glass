@@ -187,13 +187,20 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
       },
       // The workout in progress sits above the bar, the way Music keeps its
       // mini player there. The bar animates the slot in and out.
+      // Inset like the bar itself, so the pill is exactly as wide as the tab
+      // capsule under it; the bottom layout lays the accessory edge to edge.
       bottomAccessory: session == null
           ? null
-          : WorkoutPill(
-              key: _pillKey,
-              session: session,
-              height: HaloMetrics.accessoryHeight,
-              onOpen: workouts.expand,
+          : Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: HaloMetrics.tabBarHorizontalPadding,
+              ),
+              child: WorkoutPill(
+                key: _pillKey,
+                session: session,
+                height: HaloMetrics.accessoryHeight,
+                onOpen: workouts.expand,
+              ),
             ),
       bottomAccessoryHeight: HaloMetrics.accessoryHeight,
       // Hidden while the keyboard is up, so it never rides up into the field.
