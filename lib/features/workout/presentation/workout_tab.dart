@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
@@ -7,13 +8,17 @@ import '../../../domain/workout.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
+import '../../../shared/widgets/large_title.dart';
 import 'workout_detail_page.dart';
 import 'workout_setup_sheet.dart';
 
 /// The Workout tab: this week at a glance, every way to start, and what was
 /// done lately.
 class WorkoutTab extends StatefulWidget {
-  const WorkoutTab({super.key});
+  const WorkoutTab({super.key, required this.titleController});
+
+  /// Drives the large title in the content and the small one in the bar.
+  final GlassLargeTitleController titleController;
 
   @override
   State<WorkoutTab> createState() => _WorkoutTabState();
@@ -40,9 +45,12 @@ class _WorkoutTabState extends State<WorkoutTab> {
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
+      controller: widget.titleController.scrollController,
       slivers: [
-        SliverToBoxAdapter(
-          child: SizedBox(height: HaloMetrics.topInset(context)),
+        ...largeTitleSlivers(
+          context,
+          title: 'Workout',
+          controller: widget.titleController,
         ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(

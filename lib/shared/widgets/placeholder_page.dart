@@ -1,8 +1,10 @@
 import 'package:flutter/cupertino.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../app/theme/halo_colors.dart';
 import '../../app/theme/halo_metrics.dart';
 import 'halo_page.dart';
+import 'large_title.dart';
 
 /// A pushed screen that has not been built yet.
 ///
@@ -44,11 +46,13 @@ class PlaceholderPage extends StatelessWidget {
 class TabPlaceholder extends StatelessWidget {
   const TabPlaceholder({
     super.key,
+    required this.titleController,
     required this.icon,
     required this.title,
     required this.message,
   });
 
+  final GlassLargeTitleController titleController;
   final Widget icon;
   final String title;
   final String message;
@@ -56,13 +60,19 @@ class TabPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
+      controller: titleController.scrollController,
       slivers: [
+        ...largeTitleSlivers(
+          context,
+          title: title,
+          controller: titleController,
+        ),
         SliverFillRemaining(
           hasScrollBody: false,
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               40,
-              HaloMetrics.topInset(context),
+              0,
               40,
               HaloMetrics.bottomInset(context),
             ),
@@ -78,7 +88,7 @@ class TabPlaceholder extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  title,
+                  'Coming Next',
                   style: TextStyle(
                     color: HaloColors.labelOf(context),
                     fontSize: 22,

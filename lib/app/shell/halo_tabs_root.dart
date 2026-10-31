@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../features/goals/presentation/goals_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
@@ -10,7 +11,6 @@ import '../../shared/widgets/account_glyph.dart';
 import '../../shared/widgets/bar_items.dart';
 import '../../shared/widgets/halo_page.dart';
 import '../../shared/widgets/placeholder_page.dart';
-import '../theme/halo_motion.dart';
 import 'halo_tab.dart';
 import 'halo_tab_controller.dart';
 
@@ -23,26 +23,53 @@ import 'halo_tab_controller.dart';
 /// Switching tabs is a `setState`, not a route change: nothing is pushed, so
 /// there is nothing for the navigation shell to hoist. Only drilling into a
 /// tab pushes.
-class HaloTabsRoot extends StatelessWidget {
+///
+/// Each tab has its own large-title controller, which owns that tab's scroll
+/// controller, so the bar's small title follows whichever tab is showing. The
+/// switch is instant, as iOS switches tabs: a cross-fade would hold two scroll
+/// views on screen at once, and a quick tap back would hand one controller to
+/// both.
+class HaloTabsRoot extends StatefulWidget {
   const HaloTabsRoot({super.key});
+
+  @override
+  State<HaloTabsRoot> createState() => _HaloTabsRootState();
+}
+
+class _HaloTabsRootState extends State<HaloTabsRoot> {
+  final Map<Object, GlassLargeTitleController> _titles = {
+    for (final tab in HaloTab.values) tab: GlassLargeTitleController(),
+    _search: GlassLargeTitleController(),
+  };
+
+  static const _search = 'search';
+
+  @override
+  void dispose() {
+    for (final controller in _titles.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final controller = HaloTabScope.of(context);
 
-    // A boundary around the whole page, for the sheets' sake: while one is up
-    // the route holds this page on screen and animates it back in scale, and
-    // without a boundary that transform would re-rasterise every glass surface
-    // on it, every frame. With one, the compositor moves a texture.
+    // A boundary around the whole page: while a sheet is up the page dims
+    // under it, and the boundary keeps that from re-rasterising its glass.
     return RepaintBoundary(child: _buildPage(context, controller));
   }
 
   Widget _buildPage(BuildContext context, HaloTabController controller) {
+    final key = controller.isSearching ? _search : controller.tab;
+    final title = _titles[key]!;
+
     return HaloPage(
       appBar: haloBar(
         context,
         title: controller.isSearching ? 'Search' : controller.tab.title,
-        largeTitle: true,
+        largeTitleController: title,
         // The root has nothing behind it; the shell would otherwise draw a
         // chevron that does nothing.
         backButton: false,
@@ -73,47 +100,43 @@ class HaloTabsRoot extends StatelessWidget {
             FocusManager.instance.primaryFocus?.unfocus();
           }
         },
-        child: AnimatedSwitcher(
-          duration: HaloMotion.of(context, HaloMotion.tabSwitchDuration),
-          // A cross-fade, not a slide: iOS tab bars do not move content
-          // sideways, and the indicator is the motion the eye follows.
-          transitionBuilder: (child, animation) =>
-              FadeTransition(opacity: animation, child: child),
-          child: _buildBody(controller),
+        child: KeyedSubtree(
+          key: ValueKey(key),
+          child: _buildBody(controller, title),
         ),
       ),
     );
   }
 
-  /// The active tab's content, keyed so the switcher treats a tab change as a
-  /// swap rather than an update of the same child.
-  Widget _buildBody(HaloTabController controller) {
+  Widget _buildBody(
+    HaloTabController controller,
+    GlassLargeTitleController title,
+  ) {
     if (controller.isSearching) {
-      return const TabPlaceholder(
-        key: ValueKey('search'),
-        icon: Icon(CupertinoIcons.search),
+      return TabPlaceholder(
+        titleController: title,
+        icon: const Icon(CupertinoIcons.search),
         title: 'Search',
         message: 'Metrics, workouts, foods and settings.',
       );
     }
 
     final tab = controller.tab;
-    if (tab == HaloTab.today) {
-      return const TodayTab(key: ValueKey(HaloTab.today));
-    }
-    if (tab == HaloTab.workout) {
-      return const WorkoutTab(key: ValueKey(HaloTab.workout));
-    }
-    return TabPlaceholder(
-      key: ValueKey(tab),
-      icon: tab.glyph,
-      title: tab.title,
-      message: switch (tab) {
-        HaloTab.today => 'Your rings, readiness and the day at a glance.',
-        HaloTab.workout => 'Start, track and review your workouts.',
-        HaloTab.sleep => 'Last night, your schedule and smart alarm.',
-        HaloTab.health => 'Every category, Health Age and Medical ID.',
-      },
-    );
+    return switch (tab) {
+      HaloTab.today => TodayTab(titleController: title),
+      HaloTab.workout => WorkoutTab(titleController: title),
+      HaloTab.sleep => TabPlaceholder(
+          titleController: title,
+          icon: tab.glyph,
+          title: tab.title,
+          message: 'Last night, your schedule and smart alarm.',
+        ),
+      HaloTab.health => TabPlaceholder(
+          titleController: title,
+          icon: tab.glyph,
+          title: tab.title,
+          message: 'Every category, Health Age and Medical ID.',
+        ),
+    };
   }
 }

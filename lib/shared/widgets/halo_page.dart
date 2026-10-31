@@ -20,6 +20,7 @@ import 'transparent_system_bars.dart';
 ///   capturing it into a texture teaches the shader nothing and costs a
 ///   capture per frame.
 /// - **System bars owned by [TransparentSystemBars]**, not the scaffold.
+/// - **The scroll edge effect** under the bar and the tab bar, as blur.
 /// - **The keyboard does not resize the page**, so it cannot shove the floating
 ///   tab bar up the screen.
 class HaloPage extends StatelessWidget {
@@ -75,9 +76,20 @@ class HaloPage extends StatelessWidget {
         ),
         enableBackgroundSampling: false,
         statusBarStyle: GlassStatusBarStyle.none,
+        // The iOS 26 scroll edge effect: content frosts progressively as it
+        // passes under the bar, and under the floating tab bar. `blur` rather
+        // than the package's default `soft`, which is only a colour fade and
+        // all but invisible over a flat page.
+        edgeStyle: GlassScrollEdgeStyle.blur,
         topEdgeFade: true,
+        // The zone ends where the bar does, so a large title at rest sits
+        // below it, sharp; only what scrolls up under the bar frosts.
+        topEdgeFadeExtent: 0,
         bottomEdgeFade: true,
-        bottomEdgeFadeExtent: 0,
+        // The tab bar floats in the chrome rather than in this scaffold, so
+        // the scaffold cannot measure it: the bottom zone is sized to it here.
+        bottomEdgeFadeExtent:
+            HaloMetrics.tabBarHeight + HaloMetrics.tabBarVerticalPadding * 2,
         resizeToAvoidBottomInset: false,
         appBar: appBar,
         body: body,
@@ -93,13 +105,14 @@ class HaloPage extends StatelessWidget {
 /// by hand that forgets either goes back to the package's 44pt defaults and
 /// visibly resizes its buttons at the moment of a push.
 ///
-/// [largeTitle] puts the title hard left at large-title size on the button's
-/// own line, which is how the tab roots read. Pushed pages keep the centred
-/// inline title.
+/// With [largeTitleController] the bar's title stays hidden until the page's
+/// large title has scrolled away, then fades in: the tab roots, which carry a
+/// `GlassLargeTitle` in their content. Without one the small title shows from
+/// the start, as on a pushed page.
 GlassAppBar haloBar(
   BuildContext context, {
   required String title,
-  bool largeTitle = false,
+  GlassLargeTitleController? largeTitleController,
   bool backButton = true,
   List<GlassBarItem> leading = const [],
   List<GlassBarItem> actions = const [],
@@ -131,7 +144,7 @@ GlassAppBar haloBar(
         ),
       ...leading,
     ],
-    centerTitle: !largeTitle,
+    largeTitleController: largeTitleController,
     padding: const EdgeInsets.symmetric(
       horizontal: HaloMetrics.cardPadding,
     ),
@@ -139,18 +152,11 @@ GlassAppBar haloBar(
       title,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: largeTitle
-          ? TextStyle(
-              color: label,
-              fontSize: HaloMetrics.largeTitleSize,
-              fontWeight: FontWeight.w700,
-              letterSpacing: HaloMetrics.largeTitleTracking,
-            )
-          : TextStyle(
-              color: label,
-              fontSize: HaloMetrics.barTitleSize,
-              fontWeight: FontWeight.w600,
-            ),
+      style: TextStyle(
+        color: label,
+        fontSize: HaloMetrics.barTitleSize,
+        fontWeight: FontWeight.w600,
+      ),
     ),
     actions: actions,
   );

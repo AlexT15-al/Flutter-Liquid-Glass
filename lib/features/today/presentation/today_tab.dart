@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
@@ -8,6 +9,7 @@ import '../../../data/activity/step_tracker.dart';
 import '../../../domain/activity_summary.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/hourly_bars.dart';
+import '../../../shared/widgets/large_title.dart';
 import '../../../shared/widgets/placeholder_page.dart';
 import '../../activity/presentation/activity_page.dart';
 import '../domain/today_card.dart';
@@ -22,7 +24,10 @@ import 'widgets/step_access_card.dart';
 /// is the user's choice of cards, in the user's order, chosen in the Edit
 /// sheet. Wide cards take a row; tiles pair up two to a row.
 class TodayTab extends StatefulWidget {
-  const TodayTab({super.key});
+  const TodayTab({super.key, required this.titleController});
+
+  /// Drives the large title in the content and the small one in the bar.
+  final GlassLargeTitleController titleController;
 
   @override
   State<TodayTab> createState() => _TodayTabState();
@@ -80,9 +85,12 @@ class _TodayTabState extends State<TodayTab> {
     final now = DateTime.now();
 
     return CustomScrollView(
+      controller: widget.titleController.scrollController,
       slivers: [
-        SliverToBoxAdapter(
-          child: SizedBox(height: HaloMetrics.topInset(context)),
+        ...largeTitleSlivers(
+          context,
+          title: 'Today',
+          controller: widget.titleController,
         ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(
