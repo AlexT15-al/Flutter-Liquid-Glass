@@ -3,7 +3,9 @@ import 'dart:convert';
 import '../../domain/activity_goals.dart';
 import '../../domain/app_theme_mode.dart';
 import '../../domain/body_profile.dart';
+import '../../domain/meal_plan.dart';
 import '../../domain/nutrition.dart';
+import '../../domain/training.dart';
 import '../../domain/sleep.dart';
 import '../../features/today/domain/today_card.dart';
 import '../database/app_database.dart';
@@ -28,6 +30,8 @@ class HaloPreferences {
   static const _sleepScheduleKey = 'sleep_schedule';
   static const _sleepDismissedKey = 'sleep_dismissed';
   static const _weightGoalKey = 'weight_goal';
+  static const _trainingKey = 'training_profile';
+  static const _mealPlanKey = 'meal_plan';
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
@@ -110,6 +114,33 @@ class HaloPreferences {
       return const WeightGoal();
     }
   }
+
+  // ── Plans ──────────────────────────────────────────────────────────────────
+
+  /// Null until the user has set up training.
+  Stream<TrainingProfile?> watchTraining() => _db
+      .watchValue(_trainingKey)
+      .map(
+        (raw) => raw == null
+            ? null
+            : TrainingProfile.fromJson(jsonDecode(raw) as Map<String, Object?>),
+      );
+
+  Future<void> setTraining(TrainingProfile profile) =>
+      _db.writeValue(_trainingKey, jsonEncode(profile.toJson()));
+
+  Stream<MealPlanSettings> watchMealPlan() => _db
+      .watchValue(_mealPlanKey)
+      .map(
+        (raw) => raw == null
+            ? const MealPlanSettings()
+            : MealPlanSettings.fromJson(
+                jsonDecode(raw) as Map<String, Object?>,
+              ),
+      );
+
+  Future<void> setMealPlan(MealPlanSettings settings) =>
+      _db.writeValue(_mealPlanKey, jsonEncode(settings.toJson()));
 
   // ── Profile ────────────────────────────────────────────────────────────────
 

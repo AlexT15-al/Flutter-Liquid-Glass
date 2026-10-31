@@ -141,6 +141,18 @@ class WeightEntries extends Table {
   RealColumn get kg => real()();
 }
 
+/// A set done in a planned training session.
+@TableIndex(name: 'exercise_sets_exercise', columns: {#exerciseId, #timeMs})
+class ExerciseSets extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// When the session started: a session's sets share it.
+  IntColumn get timeMs => integer()();
+  TextColumn get exerciseId => text()();
+  IntColumn get reps => integer()();
+  RealColumn get kg => real().nullable()();
+}
+
 @DriftDatabase(
   tables: [
     StepIntervals,
@@ -152,6 +164,7 @@ class WeightEntries extends Table {
     FoodEntries,
     WaterEntries,
     WeightEntries,
+    ExerciseSets,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -163,7 +176,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -192,6 +205,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createIndex(waterEntriesTime);
         await m.createTable(weightEntries);
         await m.createIndex(weightEntriesTime);
+      }
+      if (from < 6) {
+        await m.createTable(exerciseSets);
+        await m.createIndex(exerciseSetsExercise);
       }
     },
     // Route points go with their workout.
@@ -393,6 +410,20 @@ class AppDatabase extends _$AppDatabase {
       (select(weightEntries)
             ..orderBy([(t) => OrderingTerm.desc(t.timeMs)])
             ..limit(limit))
+          .watch();
+
+  // ── Training ───────────────────────────────────────────────────────────────
+
+  Future<void> insertSets(List<ExerciseSetsCompanion> sets) =>
+      batch((b) => b.insertAll(exerciseSets, sets));
+
+  /// Sets from the last [days] days, newest first.
+  Stream<List<ExerciseSet>> watchSetsSince(DateTime from) =>
+      (select(exerciseSets)
+            ..where(
+              (t) => t.timeMs.isBiggerOrEqualValue(from.millisecondsSinceEpoch),
+            )
+            ..orderBy([(t) => OrderingTerm.desc(t.timeMs)]))
           .watch();
 
   // ── Key-value ──────────────────────────────────────────────────────────────

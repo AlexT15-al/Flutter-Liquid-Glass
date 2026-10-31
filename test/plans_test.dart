@@ -1,0 +1,153 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:halo/domain/body_profile.dart';
+import 'package:halo/domain/meal_plan.dart';
+import 'package:halo/domain/nutrition.dart';
+import 'package:halo/domain/training.dart';
+
+void main() {
+  const body = BodyProfile(
+    heightCm: 178,
+    weightKg: 80,
+    sex: BiologicalSex.male,
+  );
+  final today = DateTime(2026, 11, 2); // a Monday
+
+  group('training', () {
+    test('three gym days are full body, loads from body weight', () {
+      final week = TrainingPlanner.week(
+        training: const TrainingProfile(),
+        body: body,
+        goal: const WeightGoal(),
+        history: const [],
+      );
+      expect(week.map((s) => s.title), [
+        'Full Body A',
+        'Full Body B',
+        'Full Body A',
+      ]);
+      final squat = week.first.exercises.first;
+      expect(squat.exercise.id, 'back_squat');
+      expect(squat.kg, 40); // 80 × 0.5, beginner
+      expect(squat.sets, 3);
+    });
+
+    test('four days split upper and lower; losing adds a finisher', () {
+      final week = TrainingPlanner.week(
+        training: TrainingProfile(weekdays: TrainingProfile.defaultDays(4)),
+        body: body,
+        goal: const WeightGoal(targetKg: 74),
+        history: const [],
+      );
+      expect(week.map((s) => s.title).toList(), [
+        'Upper A',
+        'Lower A',
+        'Upper B',
+        'Lower B',
+      ]);
+      expect(
+        week.every(
+          (s) => s.exercises.last.exercise.pattern == Pattern.conditioning,
+        ),
+        isTrue,
+      );
+    });
+
+    List<SetLog> session(DateTime t, String id, double kg, List<int> reps) => [
+      for (final r in reps) SetLog(time: t, exerciseId: id, reps: r, kg: kg),
+    ];
+
+    PlannedExercise squatAfter(List<SetLog> history) => TrainingPlanner.week(
+      training: const TrainingProfile(),
+      body: body,
+      goal: const WeightGoal(),
+      history: history,
+    ).first.exercises.first;
+
+    test('all sets at the top of the range: the load goes up', () {
+      final next = squatAfter(session(today, 'back_squat', 60, [12, 12, 12]));
+      expect(next.kg, 65);
+      expect(next.change, 5);
+    });
+
+    test('in range: the same load, more reps', () {
+      final next = squatAfter(session(today, 'back_squat', 60, [12, 10, 9]));
+      expect(next.kg, 60);
+    });
+
+    test('short of the range twice running: the load comes down', () {
+      final next = squatAfter([
+        ...session(today, 'back_squat', 60, [8, 6, 5]),
+        ...session(today.subtract(const Duration(days: 3)), 'back_squat', 60, [
+          7,
+          6,
+          6,
+        ]),
+      ]);
+      expect(next.kg, 55);
+      expect(next.change, -5);
+    });
+
+    test('at home, mastering an exercise moves up the ladder', () {
+      const home = TrainingProfile(place: TrainingPlace.home);
+      PlannedExercise push(List<SetLog> history) => TrainingPlanner.week(
+        training: home,
+        body: body,
+        goal: const WeightGoal(),
+        history: history,
+      ).first.exercises[1];
+      expect(push(const []).exercise.id, 'incline_pushup');
+      expect(
+        push(session(today, 'incline_pushup', 0, [15, 15, 15])).exercise.id,
+        'pushup',
+      );
+      expect(
+        push(session(today, 'incline_pushup', 0, [15, 12, 10])).exercise.id,
+        'incline_pushup',
+      );
+    });
+  });
+
+  group('meals', () {
+    final targets = NutritionTargets.of(body, const WeightGoal(), today: today);
+
+    test('a day adds up to about its calories', () {
+      final day = MealPlanner.day(today, targets, const MealPlanSettings());
+      final kcal = day.fold<double>(0, (t, m) => t + m.kcal);
+      expect(kcal, closeTo(targets.kcal, targets.kcal * 0.12));
+      expect(day.map((m) => m.meal), Meal.values);
+    });
+
+    test('fasting days plan only lenten food', () {
+      const settings = MealPlanSettings(fastingWeekdays: {3, 5});
+      final wednesday = today.add(const Duration(days: 2));
+      final plan = MealPlanner.day(wednesday, targets, settings);
+      expect(plan.every((m) => m.item.lenten), isTrue);
+      final lent = MealPlanner.day(
+        today,
+        targets,
+        const MealPlanSettings(lent: true),
+      );
+      expect(lent.every((m) => m.item.lenten), isTrue);
+    });
+
+    test('the same date gives the same plan; a swap changes one meal', () {
+      const settings = MealPlanSettings();
+      final a = MealPlanner.day(today, targets, settings);
+      final b = MealPlanner.day(today, targets, settings);
+      expect(a.map((m) => m.item.name), b.map((m) => m.item.name));
+      final swapped = MealPlanner.day(
+        today,
+        targets,
+        settings.swapped(today, Meal.lunch),
+      );
+      expect(swapped[1].item.name, isNot(a[1].item.name));
+      expect(swapped[0].item.name, a[0].item.name);
+      final tomorrow = MealPlanner.day(
+        today.add(const Duration(days: 1)),
+        targets,
+        settings,
+      );
+      expect(tomorrow[1].item.name, isNot(a[1].item.name));
+    });
+  });
+}

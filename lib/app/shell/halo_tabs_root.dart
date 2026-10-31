@@ -3,6 +3,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../features/goals/presentation/goals_page.dart';
 import '../../features/nutrition/presentation/nutrition_tab.dart';
+import '../../features/plans/presentation/plans_tab.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/today/presentation/edit_today_sheet.dart';
@@ -106,12 +107,7 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
       HaloTab.today => TodayTab(titleController: title),
       HaloTab.workout => WorkoutTab(titleController: title),
       HaloTab.nutrition => NutritionTab(titleController: title),
-      HaloTab.plans => TabPlaceholder(
-        titleController: title,
-        icon: tab.glyph,
-        title: tab.title,
-        message: 'Your week of meals and training, adapted to you.',
-      ),
+      HaloTab.plans => PlansTab(titleController: title),
       HaloTab.health => TabPlaceholder(
         titleController: title,
         icon: tab.glyph,
