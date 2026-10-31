@@ -20,7 +20,7 @@ import 'transparent_system_bars.dart';
 ///   capturing it into a texture teaches the shader nothing and costs a
 ///   capture per frame.
 /// - **System bars owned by [TransparentSystemBars]**, not the scaffold.
-/// - **The scroll edge effect** under the bar and the tab bar, as blur.
+/// - **The scroll edge effect** under the bar, and only there.
 /// - **The keyboard does not resize the page**, so it cannot shove the floating
 ///   tab bar up the screen.
 class HaloPage extends StatelessWidget {
@@ -76,20 +76,11 @@ class HaloPage extends StatelessWidget {
         ),
         enableBackgroundSampling: false,
         statusBarStyle: GlassStatusBarStyle.none,
-        // The iOS 26 scroll edge effect: content frosts progressively as it
-        // passes under the bar, and under the floating tab bar. `blur` rather
-        // than the package's default `soft`, which is only a colour fade and
-        // all but invisible over a flat page.
-        edgeStyle: GlassScrollEdgeStyle.blur,
+        // The scroll edge effect at the top only: content dissolves into the
+        // page as it passes under the bar. Nothing at the bottom; the floating
+        // tab bar's own glass is enough there.
         topEdgeFade: true,
-        // The zone ends where the bar does, so a large title at rest sits
-        // below it, sharp; only what scrolls up under the bar frosts.
-        topEdgeFadeExtent: 0,
-        bottomEdgeFade: true,
-        // The tab bar floats in the chrome rather than in this scaffold, so
-        // the scaffold cannot measure it: the bottom zone is sized to it here.
-        bottomEdgeFadeExtent:
-            HaloMetrics.tabBarHeight + HaloMetrics.tabBarVerticalPadding * 2,
+        bottomEdgeFade: false,
         resizeToAvoidBottomInset: false,
         appBar: appBar,
         body: body,
