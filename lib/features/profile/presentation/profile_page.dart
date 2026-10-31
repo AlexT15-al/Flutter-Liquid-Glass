@@ -8,10 +8,13 @@ import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_glass.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../data/preferences/halo_preferences.dart';
+import '../../../domain/avatar_preset.dart';
 import '../../../domain/body_profile.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_page.dart';
+import '../../../shared/widgets/profile_avatar.dart';
+import 'avatar_sheet.dart';
 
 /// Health Details: who the user is, as far as the numbers need to know.
 ///
@@ -154,16 +157,18 @@ class _HeaderState extends State<_Header> {
     setState(() {});
   }
 
-  void _write() {
-    final trimmed = _name.text.trim();
-    widget.preferences.setProfile(
-      BodyProfile(
-        name: trimmed.isEmpty ? null : trimmed,
-        heightCm: widget.profile.heightCm,
-        weightKg: widget.profile.weightKg,
-        birthDate: widget.profile.birthDate,
-        sex: widget.profile.sex,
-      ),
+  void _write() =>
+      widget.preferences.setProfile(widget.profile.withName(_name.text));
+
+  Future<void> _chooseAvatar() async {
+    final chosen = await showAvatarSheet(
+      context,
+      name: _name.text,
+      current: widget.profile.avatar,
+    );
+    if (chosen == null || !mounted) return;
+    await widget.preferences.setProfile(
+      widget.profile.withAvatar(chosen.isEmpty ? null : chosen),
     );
   }
 
@@ -171,8 +176,29 @@ class _HeaderState extends State<_Header> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ProfileAvatar(name: _name.text, size: 92),
-        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: _chooseAvatar,
+          child: Column(
+            children: [
+              ProfileAvatar(
+                name: _name.text,
+                preset: AvatarPreset.byName(widget.profile.avatar),
+                size: 92,
+              ),
+              const SizedBox(height: 8),
+              // iOS Contacts' cue under the photo: the avatar is editable.
+              Text(
+                'Edit',
+                style: TextStyle(
+                  color: HaloColors.accent.resolveFrom(context),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
         CupertinoTextField(
           controller: _name,
           onChanged: _changed,
@@ -194,60 +220,6 @@ class _HeaderState extends State<_Header> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A circle with the user's initials, or a person glyph without a name.
-class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({super.key, required this.name, required this.size});
-
-  final String? name;
-  final double size;
-
-  static String initialsOf(String? name) {
-    final words = (name ?? '')
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .toList();
-    if (words.isEmpty) return '';
-    final first = words.first.characters.first;
-    final last = words.length > 1 ? words.last.characters.first : '';
-    return (first + last).toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final initials = initialsOf(name);
-    final accent = HaloColors.accent.resolveFrom(context);
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [accent, Color.lerp(accent, const Color(0xFF000000), 0.35)!],
-        ),
-      ),
-      alignment: Alignment.center,
-      child: initials.isEmpty
-          ? Icon(
-              CupertinoIcons.person_fill,
-              size: size * 0.5,
-              color: HaloColors.onAccent.resolveFrom(context),
-            )
-          : Text(
-              initials,
-              style: TextStyle(
-                color: HaloColors.onAccent.resolveFrom(context),
-                fontSize: size * 0.38,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
     );
   }
 }

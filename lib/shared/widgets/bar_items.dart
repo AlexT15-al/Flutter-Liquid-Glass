@@ -42,58 +42,140 @@ GlassMenuItem haloMenuItem(
   );
 }
 
-/// The account button on the tab roots: a 48pt glass circle that morphs into
-/// its menu.
+/// Every pull-down menu in the app, with one material and one behaviour.
 ///
-/// `GlassBarItem.menu` with a `separate` background: the whole circle becomes
-/// the pull-down, the iOS 26 way. `separate` gives it its own circular shell
-/// at the bar's 48pt button size; a lone `shared` item would instead draw at
-/// the capsule's height and come out 2pt larger than everything beside it.
+/// `enableContinuousSwipe` is the iOS 26 pull-down: press and the menu opens
+/// under the finger, slide onto an item, release to choose it, all one
+/// gesture; release without moving and it stays open for a tap. It opens from
+/// the raw pointer-down, so the trigger must not also toggle the menu: its tap
+/// would arrive on release and close the menu the press just opened. That is
+/// why [triggerBuilder] is handed nothing to call.
+class HaloMenu extends StatelessWidget {
+  const HaloMenu({
+    super.key,
+    required this.items,
+    required this.trigger,
+    this.width = 220,
+    this.alignment = GlassMenuAlignment.topRight,
+  });
+
+  final List<Widget> items;
+  final Widget trigger;
+  final double width;
+  final GlassMenuAlignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    const inset = HaloMetrics.cardPadding;
+    return GlassMenu(
+      menuWidth: width,
+      menuAlignment: alignment,
+      autoAdjustToScreen: true,
+      // The bottom inset is the floating tab bar's height, so a menu opened
+      // low on a page is nudged up above the bar instead of under it.
+      menuPadding: EdgeInsets.fromLTRB(
+        inset,
+        inset,
+        inset,
+        HaloMetrics.bottomInset(context),
+      ),
+      settings: HaloGlass.of(context),
+      // Named here: bars wrap their contents in an isolation scope with its
+      // own default tier, which a menu opened from a bar would otherwise take.
+      quality: HaloGlass.quality,
+      selectionColor: HaloColors.labelOf(context).withValues(alpha: 0.12),
+      enableContinuousSwipe: true,
+      items: items,
+      triggerBuilder: (context, _) => trigger,
+    );
+  }
+}
+
+/// The account button on the tab roots: a 48pt glass circle that opens its
+/// menu under the finger and lets it slide straight onto an item.
+///
+/// A custom item with its own glass rather than `GlassBarItem.menu`: the
+/// package's bar menu has no continuous swipe, and a custom item keeps our
+/// material and tier while still taking part in the cross-route morph.
 GlassBarItem accountBarItem(
   BuildContext context, {
+  required Widget glyph,
   required VoidCallback onProfile,
   required VoidCallback onGoals,
   required VoidCallback onAwards,
   required VoidCallback onSettings,
 }) {
-  return GlassBarItem.menu(
+  return GlassBarItem.custom(
     id: BarItemIds.account,
     label: 'Account',
-    background: GlassBarItemBackground.separate,
-    icon: const Icon(
-      CupertinoIcons.person_crop_circle_fill,
-      size: HaloMetrics.barButtonSize * HaloMetrics.accountGlyphRatio,
+    background: GlassBarItemBackground.own,
+    child: HaloMenu(
+      items: [
+        haloMenuItem(
+          context,
+          title: 'Profile',
+          icon: CupertinoIcons.person_fill,
+          onTap: onProfile,
+        ),
+        haloMenuItem(
+          context,
+          title: 'Goals',
+          icon: CupertinoIcons.scope,
+          onTap: onGoals,
+        ),
+        haloMenuItem(
+          context,
+          title: 'Awards',
+          icon: CupertinoIcons.rosette,
+          onTap: onAwards,
+        ),
+        const GlassMenuDivider(),
+        haloMenuItem(
+          context,
+          title: 'Settings',
+          icon: CupertinoIcons.gear_alt_fill,
+          onTap: onSettings,
+        ),
+      ],
+      trigger: BarCircleButton(label: 'Account', glyph: glyph),
     ),
-    menuSettings: HaloGlass.of(context),
-    menuWidth: 220,
-    menuItems: [
-      haloMenuItem(
-        context,
-        title: 'Profile',
-        icon: CupertinoIcons.person_fill,
-        onTap: onProfile,
-      ),
-      haloMenuItem(
-        context,
-        title: 'Goals',
-        icon: CupertinoIcons.scope,
-        onTap: onGoals,
-      ),
-      haloMenuItem(
-        context,
-        title: 'Awards',
-        icon: CupertinoIcons.rosette,
-        onTap: onAwards,
-      ),
-      const GlassMenuDivider(),
-      haloMenuItem(
-        context,
-        title: 'Settings',
-        icon: CupertinoIcons.gear_alt_fill,
-        onTap: onSettings,
-      ),
-    ],
   );
+}
+
+/// A 48pt glass circle for a custom bar item.
+///
+/// Sized from the height the bar lays it out at, not from a constant: a pinned
+/// item is held to the cluster's height but not its width, and a fixed pair of
+/// numbers came out as an ellipse in Music. Squaring the height keeps it round.
+///
+/// Its tap is inert. It is a menu trigger: the menu opens from the pointer.
+class BarCircleButton extends StatelessWidget {
+  const BarCircleButton({super.key, required this.label, required this.glyph});
+
+  final String label;
+  final Widget glyph;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final diameter = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : HaloMetrics.barButtonSize;
+        return GlassButton.custom(
+          onTap: () {},
+          label: label,
+          width: diameter,
+          height: diameter,
+          shape: const LiquidOval(),
+          settings: HaloGlass.of(context),
+          quality: HaloGlass.quality,
+          useOwnLayer: true,
+          child: Center(child: glyph),
+        );
+      },
+    );
+  }
 }
 
 /// The Edit / Done capsule: 62 × 48, glass, fixed width so it does not resize

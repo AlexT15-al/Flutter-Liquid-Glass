@@ -6,6 +6,7 @@
 class BodyProfile {
   const BodyProfile({
     this.name,
+    this.avatar,
     this.heightCm = 170,
     this.weightKg = 70,
     this.birthDate,
@@ -15,6 +16,9 @@ class BodyProfile {
   /// What the app calls the user. Optional; the account button shows initials
   /// when there is one.
   final String? name;
+
+  /// The chosen avatar preset, by name. Null shows the initials.
+  final String? avatar;
 
   final double heightCm;
   final double weightKg;
@@ -44,6 +48,27 @@ class BodyProfile {
     return today.year - born.year - (hadBirthday ? 0 : 1);
   }
 
+  /// Replaces the avatar; null goes back to the initials. Separate from
+  /// [copyWith], which cannot tell "set to null" from "leave alone".
+  BodyProfile withAvatar(String? avatar) => BodyProfile(
+        name: name,
+        avatar: avatar,
+        heightCm: heightCm,
+        weightKg: weightKg,
+        birthDate: birthDate,
+        sex: sex,
+      );
+
+  /// Replaces the name; null or blank clears it.
+  BodyProfile withName(String? name) => BodyProfile(
+        name: (name == null || name.trim().isEmpty) ? null : name.trim(),
+        avatar: avatar,
+        heightCm: heightCm,
+        weightKg: weightKg,
+        birthDate: birthDate,
+        sex: sex,
+      );
+
   BodyProfile copyWith({
     String? name,
     double? heightCm,
@@ -53,6 +78,7 @@ class BodyProfile {
   }) =>
       BodyProfile(
         name: name ?? this.name,
+        avatar: avatar,
         heightCm: heightCm ?? this.heightCm,
         weightKg: weightKg ?? this.weightKg,
         birthDate: birthDate ?? this.birthDate,
@@ -61,6 +87,7 @@ class BodyProfile {
 
   Map<String, Object?> toJson() => {
         'name': name,
+        'avatar': avatar,
         'heightCm': heightCm,
         'weightKg': weightKg,
         'birthDate': birthDate?.toIso8601String(),
@@ -69,6 +96,7 @@ class BodyProfile {
 
   factory BodyProfile.fromJson(Map<String, Object?> json) => BodyProfile(
         name: json['name'] as String?,
+        avatar: json['avatar'] as String?,
         heightCm: (json['heightCm'] as num?)?.toDouble() ?? fallback.heightCm,
         weightKg: (json['weightKg'] as num?)?.toDouble() ?? fallback.weightKg,
         birthDate: DateTime.tryParse(json['birthDate'] as String? ?? ''),
