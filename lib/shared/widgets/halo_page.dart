@@ -24,11 +24,7 @@ import 'transparent_system_bars.dart';
 /// - **The keyboard does not resize the page**, so it cannot shove the floating
 ///   tab bar up the screen.
 class HaloPage extends StatelessWidget {
-  const HaloPage({
-    super.key,
-    required this.appBar,
-    required this.body,
-  });
+  const HaloPage({super.key, required this.appBar, required this.body});
 
   /// A `GlassAppBar.pinned` built with [haloBar].
   final PreferredSizeWidget appBar;
@@ -136,9 +132,7 @@ GlassAppBar haloBar(
       ...leading,
     ],
     largeTitleController: largeTitleController,
-    padding: const EdgeInsets.symmetric(
-      horizontal: HaloMetrics.cardPadding,
-    ),
+    padding: const EdgeInsets.symmetric(horizontal: HaloMetrics.cardPadding),
     title: Text(
       title,
       maxLines: 1,

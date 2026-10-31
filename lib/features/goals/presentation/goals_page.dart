@@ -96,7 +96,7 @@ class _GoalsPageState extends State<GoalsPage> {
               _GoalCard(
                 title: 'Steps',
                 description: 'Steps to take each day.',
-                color: HaloColors.activity.resolveFrom(context),
+                color: HaloColors.steps.resolveFrom(context),
                 value: goals.steps,
                 unit: 'STEPS',
                 step: 500,
@@ -165,7 +165,9 @@ class _GoalCard extends StatelessWidget {
                 icon: CupertinoIcons.minus,
                 color: color,
                 label: 'Decrease $title',
-                onStep: value - step >= min ? () => onChanged(value - step) : null,
+                onStep: value - step >= min
+                    ? () => onChanged(value - step)
+                    : null,
               ),
               Expanded(
                 child: Column(
@@ -196,7 +198,9 @@ class _GoalCard extends StatelessWidget {
                 icon: CupertinoIcons.plus,
                 color: color,
                 label: 'Increase $title',
-                onStep: value + step <= max ? () => onChanged(value + step) : null,
+                onStep: value + step <= max
+                    ? () => onChanged(value + step)
+                    : null,
               ),
             ],
           ),

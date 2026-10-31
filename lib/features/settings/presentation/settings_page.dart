@@ -61,9 +61,7 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: HaloMetrics.sectionTopGap),
           const GroupedCard(
-            children: [
-              GroupedRow(title: 'Version', value: '1.0'),
-            ],
+            children: [GroupedRow(title: 'Version', value: '1.0')],
           ),
         ],
       ),
@@ -147,8 +145,8 @@ class _MotionAccessCard extends StatelessWidget {
             onTap: access == StepAccess.unavailable
                 ? null
                 : access == StepAccess.granted && android
-                    ? AndroidPermissions.openSettings
-                    : steps.requestAccess,
+                ? AndroidPermissions.openSettings
+                : steps.requestAccess,
           ),
         ],
       ),

@@ -184,8 +184,8 @@ class ActiveHoursChart extends StatelessWidget {
                         color: active[i]
                             ? color
                             : (upToHour != null && i > upToHour!)
-                                ? track.withValues(alpha: track.a * 0.4)
-                                : track,
+                            ? track.withValues(alpha: track.a * 0.4)
+                            : track,
                       ),
                     ),
                   ),

@@ -53,9 +53,29 @@ class Workouts extends Table {
   RealColumn get activeKcal => real()();
   IntColumn get steps => integer()();
   IntColumn get effort => integer().nullable()();
+
+  /// Metres climbed, for a GPS workout. Added in schema 3.
+  RealColumn get elevationGainM => real().withDefault(const Constant(0.0))();
 }
 
-@DriftDatabase(tables: [StepIntervals, KeyValues, Workouts])
+/// The route of a GPS workout, one row per fix, in order.
+@TableIndex(name: 'workout_points_workout', columns: {#workoutId})
+class WorkoutPoints extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get workoutId =>
+      integer().references(Workouts, #id, onDelete: KeyAction.cascade)();
+  RealColumn get latitude => real()();
+  RealColumn get longitude => real()();
+  RealColumn get altitude => real().nullable()();
+
+  /// Moving time at the fix.
+  IntColumn get elapsedMs => integer()();
+
+  /// The stretch of moving it belongs to; a new one after every pause.
+  IntColumn get segment => integer()();
+}
+
+@DriftDatabase(tables: [StepIntervals, KeyValues, Workouts, WorkoutPoints])
 class AppDatabase extends _$AppDatabase {
   /// Opened lazily: the file is not touched until the first query, so
   /// constructing this costs nothing at launch.
@@ -65,18 +85,29 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.createTable(workouts);
-            await m.createIndex(workoutsStart);
-          }
-        },
-      );
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        // Created at the current shape, elevation column included.
+        await m.createTable(workouts);
+        await m.createIndex(workoutsStart);
+      } else if (from < 3) {
+        await m.addColumn(workouts, workouts.elevationGainM);
+      }
+      if (from < 3) {
+        await m.createTable(workoutPoints);
+        await m.createIndex(workoutPointsWorkout);
+      }
+    },
+    // Route points go with their workout.
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 
   // ── Steps ──────────────────────────────────────────────────────────────────
 
@@ -99,9 +130,11 @@ class AppDatabase extends _$AppDatabase {
     final fromMs = from.millisecondsSinceEpoch;
     final toMs = to.millisecondsSinceEpoch;
     return (select(stepIntervals)
-          ..where((t) =>
-              t.endMs.isBiggerThanValue(fromMs) &
-              t.startMs.isSmallerThanValue(toMs))
+          ..where(
+            (t) =>
+                t.endMs.isBiggerThanValue(fromMs) &
+                t.startMs.isSmallerThanValue(toMs),
+          )
           ..orderBy([(t) => OrderingTerm.asc(t.startMs)]))
         .get();
   }
@@ -111,32 +144,55 @@ class AppDatabase extends _$AppDatabase {
   Future<int> insertWorkout(WorkoutsCompanion workout) =>
       into(workouts).insert(workout);
 
+  /// Stores a workout and its route in one transaction: a workout never
+  /// exists with half a route.
+  Future<int> insertWorkoutWithRoute(
+    WorkoutsCompanion workout,
+    List<WorkoutPointsCompanion> Function(int id) points,
+  ) {
+    return transaction(() async {
+      final id = await into(workouts).insert(workout);
+      await batch((b) => b.insertAll(workoutPoints, points(id)));
+      return id;
+    });
+  }
+
   Future<void> deleteWorkout(int id) =>
       (delete(workouts)..where((t) => t.id.equals(id))).go();
+
+  Future<List<WorkoutPoint>> routeOf(int workoutId) =>
+      (select(workoutPoints)
+            ..where((t) => t.workoutId.equals(workoutId))
+            ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+          .get();
 
   /// Workouts that started in `[from, to)`, newest first, as they change.
   Stream<List<Workout>> watchWorkoutsBetween(DateTime from, DateTime to) {
     final fromMs = from.millisecondsSinceEpoch;
     final toMs = to.millisecondsSinceEpoch;
     return (select(workouts)
-          ..where((t) =>
-              t.startMs.isBiggerOrEqualValue(fromMs) &
-              t.startMs.isSmallerThanValue(toMs))
+          ..where(
+            (t) =>
+                t.startMs.isBiggerOrEqualValue(fromMs) &
+                t.startMs.isSmallerThanValue(toMs),
+          )
           ..orderBy([(t) => OrderingTerm.desc(t.startMs)]))
         .watch();
   }
 
   /// The latest [limit] workouts, newest first.
-  Stream<List<Workout>> watchRecentWorkouts(int limit) => (select(workouts)
-        ..orderBy([(t) => OrderingTerm.desc(t.startMs)])
-        ..limit(limit))
-      .watch();
+  Stream<List<Workout>> watchRecentWorkouts(int limit) =>
+      (select(workouts)
+            ..orderBy([(t) => OrderingTerm.desc(t.startMs)])
+            ..limit(limit))
+          .watch();
 
   // ── Key-value ──────────────────────────────────────────────────────────────
 
   Future<String?> readValue(String key) async {
-    final row = await (select(keyValues)..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (select(
+      keyValues,
+    )..where((t) => t.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
@@ -147,8 +203,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> writeValue(String key, String value) {
-    return into(keyValues).insertOnConflictUpdate(
-      KeyValuesCompanion.insert(key: key, value: value),
-    );
+    return into(
+      keyValues,
+    ).insertOnConflictUpdate(KeyValuesCompanion.insert(key: key, value: value));
   }
 }

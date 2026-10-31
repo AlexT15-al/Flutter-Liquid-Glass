@@ -71,8 +71,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     value: profile.birthDate == null
                         ? 'Not Set'
                         : '${profile.birthDate!.day} '
-                            '${Format.monthName(profile.birthDate!)} '
-                            '${profile.birthDate!.year}',
+                              '${Format.monthName(profile.birthDate!)} '
+                              '${profile.birthDate!.year}',
                     editor: _BirthDateEditor(
                       initial: profile.birthDate,
                       onChanged: (date) =>
@@ -135,8 +135,9 @@ class _Header extends StatefulWidget {
 }
 
 class _HeaderState extends State<_Header> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.profile.name ?? '');
+  late final TextEditingController _name = TextEditingController(
+    text: widget.profile.name ?? '',
+  );
   Timer? _save;
 
   @override
@@ -306,8 +307,8 @@ class _HeightEditorState extends State<_HeightEditor> {
 
   late final FixedExtentScrollController _controller =
       FixedExtentScrollController(
-    initialItem: (widget.initial - _min).clamp(0, _max - _min),
-  );
+        initialItem: (widget.initial - _min).clamp(0, _max - _min),
+      );
 
   @override
   void dispose() {
@@ -346,11 +347,15 @@ class _WeightEditorState extends State<_WeightEditor> {
   static const _max = 250;
 
   late int _whole = widget.initial.floor().clamp(_min, _max);
-  late int _tenth = ((widget.initial - widget.initial.floor()) * 10).round() % 10;
+  late int _tenth =
+      ((widget.initial - widget.initial.floor()) * 10).round() % 10;
 
-  late final _wholeController =
-      FixedExtentScrollController(initialItem: _whole - _min);
-  late final _tenthController = FixedExtentScrollController(initialItem: _tenth);
+  late final _wholeController = FixedExtentScrollController(
+    initialItem: _whole - _min,
+  );
+  late final _tenthController = FixedExtentScrollController(
+    initialItem: _tenth,
+  );
 
   @override
   void dispose() {

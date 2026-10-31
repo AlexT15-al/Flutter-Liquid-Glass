@@ -111,9 +111,9 @@ class _WorkoutTabState extends State<WorkoutTab> {
                             leading: _TypeBadge(type: workout.type, size: 32),
                             title: workout.type.title,
                             value: Format.relativeDay(workout.start),
-                            onTap: () => Navigator.of(context).push(
-                              WorkoutDetailPage.route(workout),
-                            ),
+                            onTap: () => Navigator.of(
+                              context,
+                            ).push(WorkoutDetailPage.route(workout)),
                           ),
                       ],
                     ),

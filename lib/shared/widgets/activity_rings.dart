@@ -42,8 +42,11 @@ class _ActivityRingsState extends State<ActivityRings>
       SingleSpringController(vsync: this, spring: HaloMotion.fill),
   ];
 
-  List<double> get _targets =>
-      [widget.move, widget.exercise, widget.activeHours];
+  List<double> get _targets => [
+    widget.move,
+    widget.exercise,
+    widget.activeHours,
+  ];
 
   bool _seeded = false;
 
@@ -94,16 +97,14 @@ class _ActivityRingsState extends State<ActivityRings>
 
     return Semantics(
       label: 'Activity rings',
-      value: 'Move ${(widget.move * 100).round()} percent, '
+      value:
+          'Move ${(widget.move * 100).round()} percent, '
           'Exercise ${(widget.exercise * 100).round()} percent, '
           'Active Hours ${(widget.activeHours * 100).round()} percent',
       child: RepaintBoundary(
         child: CustomPaint(
           size: Size.square(widget.size),
-          painter: _RingsPainter(
-            springs: _springs,
-            colors: colors,
-          ),
+          painter: _RingsPainter(springs: _springs, colors: colors),
         ),
       ),
     );
@@ -112,7 +113,7 @@ class _ActivityRingsState extends State<ActivityRings>
 
 class _RingsPainter extends CustomPainter {
   _RingsPainter({required this.springs, required this.colors})
-      : super(repaint: Listenable.merge(springs));
+    : super(repaint: Listenable.merge(springs));
 
   final List<SingleSpringController> springs;
   final List<Color> colors;
@@ -196,11 +197,16 @@ class _RingsPainter extends CustomPainter {
     // cap is what separates the second lap from the first.
     final overlap = progress - 1;
     final endAngle = start + 2 * math.pi * overlap;
-    final cap = centre + Offset(math.cos(endAngle), math.sin(endAngle)) * radius;
+    final cap =
+        centre + Offset(math.cos(endAngle), math.sin(endAngle)) * radius;
     canvas.drawCircle(
-      cap + Offset(math.cos(endAngle + math.pi / 2), math.sin(endAngle + math.pi / 2)) *
-          stroke *
-          0.12,
+      cap +
+          Offset(
+                math.cos(endAngle + math.pi / 2),
+                math.sin(endAngle + math.pi / 2),
+              ) *
+              stroke *
+              0.12,
       stroke / 2,
       Paint()
         ..color = const Color(0x66000000)

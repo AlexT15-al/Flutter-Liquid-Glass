@@ -94,8 +94,7 @@ class _GroupedRowState extends State<GroupedRow> {
   Widget build(BuildContext context) {
     final interactive = widget.editor != null || widget.onTap != null;
     final accent = HaloColors.accent.resolveFrom(context);
-    final valueColor =
-        _open ? accent : HaloColors.secondaryLabelOf(context);
+    final valueColor = _open ? accent : HaloColors.secondaryLabelOf(context);
 
     final row = AnimatedContainer(
       duration: HaloMotion.of(

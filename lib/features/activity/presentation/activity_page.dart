@@ -86,8 +86,10 @@ class _ActivityPageState extends State<ActivityPage> {
               const SizedBox(height: 14),
               Center(
                 child: AnimatedSwitcher(
-                  duration:
-                      HaloMotion.of(context, HaloMotion.controlSwapDuration),
+                  duration: HaloMotion.of(
+                    context,
+                    HaloMotion.controlSwapDuration,
+                  ),
                   child: Text(
                     Format.relativeDay(_selected),
                     key: ValueKey(Format.longDate(_selected)),
@@ -101,8 +103,10 @@ class _ActivityPageState extends State<ActivityPage> {
               ),
               const SizedBox(height: 24),
               AnimatedSwitcher(
-                duration:
-                    HaloMotion.of(context, HaloMotion.controlSwapDuration),
+                duration: HaloMotion.of(
+                  context,
+                  HaloMotion.controlSwapDuration,
+                ),
                 switchInCurve: HaloMotion.standardCurve,
                 switchOutCurve: HaloMotion.standardCurve,
                 layoutBuilder: (current, previous) => Stack(
@@ -294,10 +298,7 @@ class _Totals extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _Total(
-              label: 'Steps',
-              value: Format.integer(day.steps),
-            ),
+            child: _Total(label: 'Steps', value: Format.integer(day.steps)),
           ),
           Container(
             width: HaloMetrics.separatorThickness,

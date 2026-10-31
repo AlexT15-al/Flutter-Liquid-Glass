@@ -76,26 +76,26 @@ abstract final class HaloGlass {
   ///
   /// Cached by colour for the identity reason above.
   static LiquidGlassSettings tinted(Color tint) => _tinted.putIfAbsent(
-        tint.toARGB32(),
-        () => LiquidGlassSettings(
-          glassColor: tint,
-          bodyMode: GlassBodyMode.clear,
-          thickness: 32,
-          blur: 0.6,
-          refractiveIndex: 1.24,
-          lensModel: GlassLensModel.paraxial,
-          saturation: 1.2,
-          lightIntensity: 0.2,
-          fresnelStrength: 0,
-          chromaticAberration: 0,
-          edgeAbsorption: 0.035,
-          rimLight: 1,
-        ),
-      );
+    tint.toARGB32(),
+    () => LiquidGlassSettings(
+      glassColor: tint,
+      bodyMode: GlassBodyMode.clear,
+      thickness: 32,
+      blur: 0.6,
+      refractiveIndex: 1.24,
+      lensModel: GlassLensModel.paraxial,
+      saturation: 1.2,
+      lightIntensity: 0.2,
+      fresnelStrength: 0,
+      chromaticAberration: 0,
+      edgeAbsorption: 0.035,
+      rimLight: 1,
+    ),
+  );
 
   /// The iOS 27 material for the current appearance.
   static LiquidGlassSettings of(BuildContext context) =>
       brightnessOf(context) == Brightness.dark
-          ? LiquidGlassSettings.ios27Dark
-          : LiquidGlassSettings.ios27Light;
+      ? LiquidGlassSettings.ios27Dark
+      : LiquidGlassSettings.ios27Light;
 }

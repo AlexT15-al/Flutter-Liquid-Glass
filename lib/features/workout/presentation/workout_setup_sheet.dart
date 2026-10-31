@@ -6,6 +6,7 @@ import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_glass.dart';
 import '../../../domain/workout.dart';
+import '../../../shared/widgets/glass_action_button.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_sheet.dart';
 import '../live/workout_controller.dart';
@@ -20,7 +21,7 @@ Future<void> showWorkoutSetup(BuildContext context, WorkoutType type) async {
     builder: (context, scroll) => _SetupSheet(controller: scroll, type: type),
   );
   if (goal == null) return;
-  controller.start(type: type, goal: goal, profile: profile);
+  await controller.start(type: type, goal: goal, profile: profile);
 }
 
 class _SetupSheet extends StatefulWidget {
@@ -45,11 +46,11 @@ class _SetupSheetState extends State<_SetupSheet> {
   };
 
   List<WorkoutGoalKind> get _kinds => [
-        WorkoutGoalKind.open,
-        WorkoutGoalKind.time,
-        if (widget.type.hasDistance) WorkoutGoalKind.distance,
-        WorkoutGoalKind.calories,
-      ];
+    WorkoutGoalKind.open,
+    WorkoutGoalKind.time,
+    if (widget.type.hasDistance) WorkoutGoalKind.distance,
+    WorkoutGoalKind.calories,
+  ];
 
   WorkoutGoal get _goal => _kind == WorkoutGoalKind.open
       ? WorkoutGoal.open
@@ -102,15 +103,15 @@ class _SetupSheetState extends State<_SetupSheet> {
                 quality: HaloGlass.quality,
                 useOwnLayer: true,
                 selectedTextStyle: DefaultTextStyle.of(context).style.copyWith(
-                      color: HaloColors.labelOf(context),
+                  color: HaloColors.labelOf(context),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedTextStyle: DefaultTextStyle.of(context).style
+                    .copyWith(
+                      color: HaloColors.secondaryLabelOf(context),
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
                     ),
-                unselectedTextStyle:
-                    DefaultTextStyle.of(context).style.copyWith(
-                          color: HaloColors.secondaryLabelOf(context),
-                          fontSize: 15,
-                        ),
               ),
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
@@ -138,7 +139,11 @@ class _SetupSheetState extends State<_SetupSheet> {
           ),
         ),
         const SizedBox(height: 28),
-        FilledCapsuleButton(label: 'Start', height: 56, onTap: _start),
+        GlassActionButton(
+          label: 'Start',
+          icon: CupertinoIcons.play_fill,
+          onTap: _start,
+        ),
       ],
     );
   }
@@ -165,9 +170,9 @@ class _TargetWheelState extends State<_TargetWheel> {
   late final List<double> _values = switch (widget.kind) {
     WorkoutGoalKind.time => [for (var m = 5; m <= 240; m += 5) m.toDouble()],
     WorkoutGoalKind.distance => [
-        for (var k = 1; k <= 100; k++) k / 2,
-        42.2,
-      ]..sort(),
+      for (var k = 1; k <= 100; k++) k / 2,
+      42.2,
+    ]..sort(),
     _ => [for (var c = 50; c <= 1500; c += 25) c.toDouble()],
   };
 
@@ -184,10 +189,10 @@ class _TargetWheelState extends State<_TargetWheel> {
   }
 
   String _label(double value) => switch (widget.kind) {
-        WorkoutGoalKind.time => '${value.round()} min',
-        WorkoutGoalKind.distance => '${value.toStringAsFixed(1)} km',
-        _ => '${value.round()} kcal',
-      };
+    WorkoutGoalKind.time => '${value.round()} min',
+    WorkoutGoalKind.distance => '${value.toStringAsFixed(1)} km',
+    _ => '${value.round()} kcal',
+  };
 
   @override
   void dispose() {

@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Icons;
 
+import 'route.dart';
+
 /// The kinds of workout Halo can record, with what the phone can measure for
 /// each.
 ///
@@ -8,12 +10,24 @@ import 'package:flutter/material.dart' show Icons;
 /// Physical Activities, rounded to typical effort: active energy is
 /// `(met − 1) × kg × hours`, the energy above resting.
 enum WorkoutType {
-  outdoorWalk('Outdoor Walk', Icons.directions_walk_rounded, 3.5, steps: true),
-  outdoorRun('Outdoor Run', Icons.directions_run_rounded, 9.8, steps: true),
+  outdoorWalk(
+    'Outdoor Walk',
+    Icons.directions_walk_rounded,
+    3.5,
+    steps: true,
+    gps: true,
+  ),
+  outdoorRun(
+    'Outdoor Run',
+    Icons.directions_run_rounded,
+    9.8,
+    steps: true,
+    gps: true,
+  ),
   indoorWalk('Indoor Walk', Icons.directions_walk_rounded, 3.5, steps: true),
   indoorRun('Indoor Run', Icons.directions_run_rounded, 9.8, steps: true),
-  hiking('Hiking', Icons.hiking_rounded, 6.0, steps: true),
-  outdoorCycle('Outdoor Cycle', Icons.directions_bike_rounded, 7.5),
+  hiking('Hiking', Icons.hiking_rounded, 6.0, steps: true, gps: true),
+  outdoorCycle('Outdoor Cycle', Icons.directions_bike_rounded, 7.5, gps: true),
   indoorCycle('Indoor Cycle', Icons.pedal_bike_rounded, 6.8),
   strength('Strength', Icons.fitness_center_rounded, 5.0),
   hiit('HIIT', Icons.local_fire_department_rounded, 8.0),
@@ -25,7 +39,13 @@ enum WorkoutType {
   elliptical('Elliptical', Icons.directions_walk_rounded, 5.0),
   other('Other', Icons.sports_rounded, 4.0);
 
-  const WorkoutType(this.title, this.icon, this.met, {this.steps = false});
+  const WorkoutType(
+    this.title,
+    this.icon,
+    this.met, {
+    this.steps = false,
+    this.gps = false,
+  });
 
   final String title;
   final IconData icon;
@@ -35,8 +55,12 @@ enum WorkoutType {
   /// already fill the Move ring on their own.
   final bool steps;
 
+  /// Outdoors: the route is followed by GPS, which gives the distance, the
+  /// pace, the climb and the map.
+  final bool gps;
+
   /// Whether a distance goal makes sense for it.
-  bool get hasDistance => steps;
+  bool get hasDistance => steps || gps;
 
   static WorkoutType? byName(String name) =>
       WorkoutType.values.asNameMap()[name];
@@ -79,11 +103,11 @@ class WorkoutGoal {
   }
 
   String get describe => switch (kind) {
-        WorkoutGoalKind.open => 'Open Goal',
-        WorkoutGoalKind.time => '${target.round()} min',
-        WorkoutGoalKind.distance => '${target.toStringAsFixed(1)} km',
-        WorkoutGoalKind.calories => '${target.round()} kcal',
-      };
+    WorkoutGoalKind.open => 'Open Goal',
+    WorkoutGoalKind.time => '${target.round()} min',
+    WorkoutGoalKind.distance => '${target.toStringAsFixed(1)} km',
+    WorkoutGoalKind.calories => '${target.round()} kcal',
+  };
 }
 
 /// A finished workout, as stored.
@@ -98,6 +122,8 @@ class WorkoutRecord {
     required this.activeKcal,
     required this.steps,
     this.effort,
+    this.elevationGainM = 0,
+    this.route = const [],
   });
 
   final int? id;
@@ -114,4 +140,25 @@ class WorkoutRecord {
 
   /// How hard it felt, 1 to 10, if the user said.
   final int? effort;
+
+  /// Metres climbed, for a GPS workout.
+  final double elevationGainM;
+
+  /// The route, for a GPS workout. Empty in lists, where it is not read; a
+  /// workout's detail loads it separately.
+  final List<RoutePoint> route;
+
+  WorkoutRecord withRoute(List<RoutePoint> route) => WorkoutRecord(
+    id: id,
+    type: type,
+    start: start,
+    end: end,
+    activeDuration: activeDuration,
+    distanceKm: distanceKm,
+    activeKcal: activeKcal,
+    steps: steps,
+    effort: effort,
+    elevationGainM: elevationGainM,
+    route: route,
+  );
 }

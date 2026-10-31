@@ -29,9 +29,7 @@ class ReadinessCard extends StatelessWidget {
             width: 76,
             height: 76,
             child: CustomPaint(
-              painter: _GaugePainter(
-                track: HaloColors.ringTrack(accent),
-              ),
+              painter: _GaugePainter(track: HaloColors.ringTrack(accent)),
               child: Center(
                 child: Text(
                   '—',

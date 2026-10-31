@@ -30,7 +30,7 @@ class StepAccessCard extends StatelessWidget {
           Icon(
             Icons.directions_walk_rounded,
             size: 34,
-            color: HaloColors.activity.resolveFrom(context),
+            color: HaloColors.steps.resolveFrom(context),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -49,12 +49,12 @@ class StepAccessCard extends StatelessWidget {
                 Text(
                   unavailable
                       ? 'This phone has no step sensor, so the rings fill '
-                          'from workouts only.'
+                            'from workouts only.'
                       : denied
-                          ? 'Physical activity access is off. Turn it on in '
-                              'Settings to fill your rings.'
-                          : 'Halo uses your phone’s motion sensor to fill '
-                              'your rings. Nothing leaves your phone.',
+                      ? 'Physical activity access is off. Turn it on in '
+                            'Settings to fill your rings.'
+                      : 'Halo uses your phone’s motion sensor to fill '
+                            'your rings. Nothing leaves your phone.',
                   style: TextStyle(
                     color: HaloColors.secondaryLabelOf(context),
                     fontSize: 13,

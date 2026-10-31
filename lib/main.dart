@@ -10,6 +10,7 @@ import 'app/theme/halo_glass.dart';
 import 'data/activity/activity_store.dart';
 import 'data/activity/step_tracker.dart';
 import 'data/database/app_database.dart';
+import 'data/location/location_tracker.dart';
 import 'data/preferences/halo_preferences.dart';
 import 'data/workouts/workout_repository.dart';
 import 'features/workout/live/workout_controller.dart';
@@ -19,9 +20,7 @@ Future<void> main() async {
 
   // Portrait only: every screen is laid out for a phone held upright, and a
   // live workout must not rotate when the phone moves in a pocket or armband.
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // Draw behind the system bars; `TransparentSystemBars` keeps them clear.
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -43,6 +42,7 @@ Future<void> main() async {
   final workoutController = WorkoutController(
     repository: workouts,
     stepCounter: steps.latestCount,
+    location: const LocationTracker(),
   );
 
   // Awaited, so the first frame already has today's steps rather than empty

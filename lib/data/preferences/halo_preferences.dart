@@ -24,7 +24,9 @@ class HaloPreferences {
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
-  Stream<AppThemeMode> watchThemeMode() => _db.watchValue(_themeModeKey).map(
+  Stream<AppThemeMode> watchThemeMode() => _db
+      .watchValue(_themeModeKey)
+      .map(
         (raw) => AppThemeMode.values.asNameMap()[raw] ?? AppThemeMode.system,
       );
 
@@ -39,9 +41,11 @@ class HaloPreferences {
 
   Stream<BodyProfile> watchProfile() => _db
       .watchValue(_profileKey)
-      .map((raw) => raw == null
-          ? BodyProfile.fallback
-          : BodyProfile.fromJson(_decode(raw)));
+      .map(
+        (raw) => raw == null
+            ? BodyProfile.fallback
+            : BodyProfile.fromJson(_decode(raw)),
+      );
 
   Future<void> setProfile(BodyProfile profile) =>
       _db.writeValue(_profileKey, jsonEncode(profile.toJson()));
@@ -50,9 +54,11 @@ class HaloPreferences {
 
   Stream<ActivityGoals> watchGoals() => _db
       .watchValue(_goalsKey)
-      .map((raw) => raw == null
-          ? ActivityGoals.fallback
-          : ActivityGoals.fromJson(_decode(raw)));
+      .map(
+        (raw) => raw == null
+            ? ActivityGoals.fallback
+            : ActivityGoals.fromJson(_decode(raw)),
+      );
 
   Future<void> setGoals(ActivityGoals goals) =>
       _db.writeValue(_goalsKey, jsonEncode(goals.toJson()));
@@ -66,15 +72,13 @@ class HaloPreferences {
         if (raw == null) return TodayCard.defaults;
         final names = (jsonDecode(raw) as List<dynamic>).cast<String>();
         final byName = TodayCard.values.asNameMap();
-        return [
-          for (final name in names) ?byName[name],
-        ];
+        return [for (final name in names) ?byName[name]];
       });
 
   Future<void> setTodayCards(List<TodayCard> cards) => _db.writeValue(
-        _todayCardsKey,
-        jsonEncode([for (final card in cards) card.name]),
-      );
+    _todayCardsKey,
+    jsonEncode([for (final card in cards) card.name]),
+  );
 
   // ── Step counter ───────────────────────────────────────────────────────────
 
@@ -90,12 +94,12 @@ class HaloPreferences {
   }
 
   Future<void> writeStepCounter(StepCounterReading reading) => _db.writeValue(
-        _stepCounterKey,
-        jsonEncode({
-          'count': reading.count,
-          'at': reading.at.millisecondsSinceEpoch,
-        }),
-      );
+    _stepCounterKey,
+    jsonEncode({
+      'count': reading.count,
+      'at': reading.at.millisecondsSinceEpoch,
+    }),
+  );
 
   static Map<String, Object?> _decode(String raw) =>
       (jsonDecode(raw) as Map<String, dynamic>).cast<String, Object?>();

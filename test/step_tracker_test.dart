@@ -17,10 +17,10 @@ void main() {
   DateTime at(int seconds) => t0.add(Duration(seconds: seconds));
 
   StepTracker build() => StepTracker(
-        preferences: preferences,
-        requiresPermission: false,
-        onSpan: (span) async => written.add(span),
-      );
+    preferences: preferences,
+    requiresPermission: false,
+    onSpan: (span) async => written.add(span),
+  );
 
   setUp(() {
     db = AppDatabase.forExecutor(NativeDatabase.memory());
@@ -38,8 +38,7 @@ void main() {
     expect((await preferences.readStepCounter())!.count, 5000);
   });
 
-  test('close readings gather into one span, written after a minute',
-      () async {
+  test('close readings gather into one span, written after a minute', () async {
     await tracker.record(1000, at(0));
     await tracker.record(1010, at(10));
     await tracker.record(1030, at(30));

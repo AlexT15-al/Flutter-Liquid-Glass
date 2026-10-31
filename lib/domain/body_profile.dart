@@ -43,7 +43,8 @@ class BodyProfile {
   int? ageOn(DateTime today) {
     final born = birthDate;
     if (born == null) return null;
-    final hadBirthday = today.month > born.month ||
+    final hadBirthday =
+        today.month > born.month ||
         (today.month == born.month && today.day >= born.day);
     return today.year - born.year - (hadBirthday ? 0 : 1);
   }
@@ -51,23 +52,23 @@ class BodyProfile {
   /// Replaces the avatar; null goes back to the initials. Separate from
   /// [copyWith], which cannot tell "set to null" from "leave alone".
   BodyProfile withAvatar(String? avatar) => BodyProfile(
-        name: name,
-        avatar: avatar,
-        heightCm: heightCm,
-        weightKg: weightKg,
-        birthDate: birthDate,
-        sex: sex,
-      );
+    name: name,
+    avatar: avatar,
+    heightCm: heightCm,
+    weightKg: weightKg,
+    birthDate: birthDate,
+    sex: sex,
+  );
 
   /// Replaces the name; null or blank clears it.
   BodyProfile withName(String? name) => BodyProfile(
-        name: (name == null || name.trim().isEmpty) ? null : name.trim(),
-        avatar: avatar,
-        heightCm: heightCm,
-        weightKg: weightKg,
-        birthDate: birthDate,
-        sex: sex,
-      );
+    name: (name == null || name.trim().isEmpty) ? null : name.trim(),
+    avatar: avatar,
+    heightCm: heightCm,
+    weightKg: weightKg,
+    birthDate: birthDate,
+    sex: sex,
+  );
 
   BodyProfile copyWith({
     String? name,
@@ -75,34 +76,34 @@ class BodyProfile {
     double? weightKg,
     DateTime? birthDate,
     BiologicalSex? sex,
-  }) =>
-      BodyProfile(
-        name: name ?? this.name,
-        avatar: avatar,
-        heightCm: heightCm ?? this.heightCm,
-        weightKg: weightKg ?? this.weightKg,
-        birthDate: birthDate ?? this.birthDate,
-        sex: sex ?? this.sex,
-      );
+  }) => BodyProfile(
+    name: name ?? this.name,
+    avatar: avatar,
+    heightCm: heightCm ?? this.heightCm,
+    weightKg: weightKg ?? this.weightKg,
+    birthDate: birthDate ?? this.birthDate,
+    sex: sex ?? this.sex,
+  );
 
   Map<String, Object?> toJson() => {
-        'name': name,
-        'avatar': avatar,
-        'heightCm': heightCm,
-        'weightKg': weightKg,
-        'birthDate': birthDate?.toIso8601String(),
-        'sex': sex.name,
-      };
+    'name': name,
+    'avatar': avatar,
+    'heightCm': heightCm,
+    'weightKg': weightKg,
+    'birthDate': birthDate?.toIso8601String(),
+    'sex': sex.name,
+  };
 
   factory BodyProfile.fromJson(Map<String, Object?> json) => BodyProfile(
-        name: json['name'] as String?,
-        avatar: json['avatar'] as String?,
-        heightCm: (json['heightCm'] as num?)?.toDouble() ?? fallback.heightCm,
-        weightKg: (json['weightKg'] as num?)?.toDouble() ?? fallback.weightKg,
-        birthDate: DateTime.tryParse(json['birthDate'] as String? ?? ''),
-        sex: BiologicalSex.values.asNameMap()[json['sex']] ??
-            BiologicalSex.unspecified,
-      );
+    name: json['name'] as String?,
+    avatar: json['avatar'] as String?,
+    heightCm: (json['heightCm'] as num?)?.toDouble() ?? fallback.heightCm,
+    weightKg: (json['weightKg'] as num?)?.toDouble() ?? fallback.weightKg,
+    birthDate: DateTime.tryParse(json['birthDate'] as String? ?? ''),
+    sex:
+        BiologicalSex.values.asNameMap()[json['sex']] ??
+        BiologicalSex.unspecified,
+  );
 }
 
 enum BiologicalSex { female, male, unspecified }

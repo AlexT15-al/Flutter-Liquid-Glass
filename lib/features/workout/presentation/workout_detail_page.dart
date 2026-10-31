@@ -4,10 +4,12 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_metrics.dart';
+import '../../../domain/route.dart';
 import '../../../domain/workout.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
+import '../widgets/route_sections.dart';
 
 /// One finished workout: when, how long, and what it added up to.
 class WorkoutDetailPage extends StatelessWidget {
@@ -16,8 +18,8 @@ class WorkoutDetailPage extends StatelessWidget {
   final WorkoutRecord workout;
 
   static Route<void> route(WorkoutRecord workout) => CupertinoPageRoute<void>(
-        builder: (_) => WorkoutDetailPage(workout: workout),
-      );
+    builder: (_) => WorkoutDetailPage(workout: workout),
+  );
 
   Future<void> _confirmDelete(BuildContext context) async {
     final delete = await showCupertinoDialog<bool>(
@@ -56,39 +58,43 @@ class WorkoutDetailPage extends StatelessWidget {
         : null;
 
     final cells = <(String, String, String, Color)>[
-      (
-        'Workout Time',
-        Format.clock(workout.activeDuration),
-        '',
-        accent,
-      ),
+      ('Workout Time', Format.clock(workout.activeDuration), '', accent),
       (
         'Active Energy',
         Format.integer(workout.activeKcal),
         'KCAL',
         HaloColors.move.resolveFrom(context),
       ),
-      if (workout.type.steps) ...[
+      if (workout.type.hasDistance && workout.distanceKm > 0)
         (
           'Distance',
           workout.distanceKm.toStringAsFixed(2),
           'KM',
           HaloColors.activeHours.resolveFrom(context),
         ),
+      if (workout.type.steps && workout.steps > 0)
         (
           'Steps',
           Format.integer(workout.steps),
           '',
-          HaloColors.activity.resolveFrom(context),
+          HaloColors.steps.resolveFrom(context),
         ),
-        if (pace != null)
-          (
-            'Avg. Pace',
-            Format.pace(pace),
-            '/KM',
-            HaloColors.labelOf(context),
-          ),
-      ],
+      if (pace != null && workout.type == WorkoutType.outdoorCycle)
+        (
+          'Avg. Speed',
+          SplitsCard.kmh(pace).toStringAsFixed(1),
+          'KM/H',
+          HaloColors.labelOf(context),
+        )
+      else if (pace != null)
+        ('Avg. Pace', Format.pace(pace), '/KM', HaloColors.labelOf(context)),
+      if (workout.elevationGainM > 0)
+        (
+          'Elevation Gain',
+          Format.integer(workout.elevationGainM),
+          'M',
+          CupertinoColors.systemOrange.resolveFrom(context),
+        ),
       if (workout.effort != null)
         (
           'Effort',
@@ -169,7 +175,8 @@ class WorkoutDetailPage extends StatelessWidget {
               for (final (title, value, unit, color) in cells)
                 LayoutBuilder(
                   builder: (context, _) {
-                    final width = (MediaQuery.sizeOf(context).width -
+                    final width =
+                        (MediaQuery.sizeOf(context).width -
                             HaloMetrics.cardPadding * 2 -
                             HaloMetrics.cardGap) /
                         2;
@@ -223,6 +230,7 @@ class WorkoutDetailPage extends StatelessWidget {
                 ),
             ],
           ),
+          if (workout.type.gps) _RouteDetails(workout: workout),
         ],
       ),
     );
@@ -230,4 +238,48 @@ class WorkoutDetailPage extends StatelessWidget {
 
   static String _time(DateTime t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+}
+
+/// The route, its splits, loaded on their own: a list of workouts never reads
+/// the points, so the page fetches them once it is open.
+class _RouteDetails extends StatefulWidget {
+  const _RouteDetails({required this.workout});
+
+  final WorkoutRecord workout;
+
+  @override
+  State<_RouteDetails> createState() => _RouteDetailsState();
+}
+
+class _RouteDetailsState extends State<_RouteDetails> {
+  Future<WorkoutRecord>? _full;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _full ??= HaloScope.workoutsOf(context).withRoute(widget.workout);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<WorkoutRecord>(
+      future: _full,
+      builder: (context, snapshot) {
+        final route = snapshot.data?.route ?? const <RoutePoint>[];
+        if (route.length < 2) return const SizedBox.shrink();
+        final splits = RouteMath.splits(route);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const WorkoutSectionTitle('Route'),
+            RouteMapCard(route: route),
+            if (splits.isNotEmpty) ...[
+              const WorkoutSectionTitle('Splits'),
+              SplitsCard(splits: splits, type: widget.workout.type),
+            ],
+          ],
+        );
+      },
+    );
+  }
 }

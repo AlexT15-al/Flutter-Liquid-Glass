@@ -32,8 +32,7 @@ class WeekStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex =
-        days.indexWhere((d) => isSameDay(d.day, selected));
+    final selectedIndex = days.indexWhere((d) => isSameDay(d.day, selected));
     final count = days.length;
 
     return LayoutBuilder(
@@ -44,8 +43,7 @@ class WeekStrip extends StatelessWidget {
           child: Stack(
             children: [
               AnimatedPositioned(
-                duration:
-                    HaloMotion.of(context, HaloMotion.standardDuration),
+                duration: HaloMotion.of(context, HaloMotion.standardDuration),
                 curve: HaloMotion.standardCurve,
                 left: slot * selectedIndex.clamp(0, count - 1) + 2,
                 top: 0,

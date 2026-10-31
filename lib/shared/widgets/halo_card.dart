@@ -72,8 +72,9 @@ class _HaloCardState extends State<HaloCard> {
                   curve: HaloMotion.pressCurve,
                   decoration: ShapeDecoration(
                     shape: HaloCard.shape,
-                    color: HaloColors.labelOf(context)
-                        .withValues(alpha: _pressed ? 0.06 : 0),
+                    color: HaloColors.labelOf(
+                      context,
+                    ).withValues(alpha: _pressed ? 0.06 : 0),
                   ),
                 ),
               ),

@@ -185,11 +185,7 @@ class BarCircleButton extends StatelessWidget {
 /// from the nearest ancestor glass layer, and throws where there is none,
 /// which is any route presented outside a scaffold.
 class EditButton extends StatelessWidget {
-  const EditButton({
-    super.key,
-    required this.editing,
-    required this.onTap,
-  });
+  const EditButton({super.key, required this.editing, required this.onTap});
 
   final bool editing;
   final VoidCallback onTap;
@@ -227,10 +223,7 @@ class EditButton extends StatelessWidget {
 }
 
 /// [EditButton] as a pinned bar item, matched across routes by its id.
-GlassBarItem editBarItem({
-  required bool editing,
-  required VoidCallback onTap,
-}) {
+GlassBarItem editBarItem({required bool editing, required VoidCallback onTap}) {
   return GlassBarItem.custom(
     id: BarItemIds.edit,
     label: editing ? 'Done' : 'Edit',

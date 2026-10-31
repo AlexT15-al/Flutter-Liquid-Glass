@@ -33,9 +33,9 @@ enum HaloTab {
   /// Cupertino icons lack. Both take their colour from the tab bar's
   /// `IconTheme`, so the bar tints them like any other glyph.
   Widget get glyph => switch (this) {
-        HaloTab.today => const RingsGlyph(),
-        HaloTab.workout => const Icon(Icons.directions_run_rounded),
-        HaloTab.sleep => const Icon(CupertinoIcons.bed_double_fill),
-        HaloTab.health => const Icon(CupertinoIcons.heart_fill),
-      };
+    HaloTab.today => const RingsGlyph(),
+    HaloTab.workout => const Icon(Icons.directions_run_rounded),
+    HaloTab.sleep => const Icon(CupertinoIcons.bed_double_fill),
+    HaloTab.health => const Icon(CupertinoIcons.heart_fill),
+  };
 }

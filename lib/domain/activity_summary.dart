@@ -50,15 +50,15 @@ class ActivitySummary {
   static const int activeHourThreshold = 250;
 
   factory ActivitySummary.empty(DateTime day) => ActivitySummary(
-        day: day,
-        steps: 0,
-        distanceKm: 0,
-        activeKcal: 0,
-        exerciseMinutes: 0,
-        activeHours: 0,
-        hourlySteps: List.filled(24, 0),
-        hourlyKcal: List.filled(24, 0),
-        hourlyExerciseMinutes: List.filled(24, 0),
-        activeHourFlags: List.filled(24, false),
-      );
+    day: day,
+    steps: 0,
+    distanceKm: 0,
+    activeKcal: 0,
+    exerciseMinutes: 0,
+    activeHours: 0,
+    hourlySteps: List.filled(24, 0),
+    hourlyKcal: List.filled(24, 0),
+    hourlyExerciseMinutes: List.filled(24, 0),
+    activeHourFlags: List.filled(24, false),
+  );
 }

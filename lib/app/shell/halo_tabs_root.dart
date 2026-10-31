@@ -88,8 +88,7 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
             onGoals: () => Navigator.of(context).push(GoalsPage.route()),
             onAwards: () =>
                 Navigator.of(context).push(PlaceholderPage.route('Awards')),
-            onSettings: () =>
-                Navigator.of(context).push(SettingsPage.route()),
+            onSettings: () => Navigator.of(context).push(SettingsPage.route()),
           ),
         ],
       ),
@@ -126,17 +125,17 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
       HaloTab.today => TodayTab(titleController: title),
       HaloTab.workout => WorkoutTab(titleController: title),
       HaloTab.sleep => TabPlaceholder(
-          titleController: title,
-          icon: tab.glyph,
-          title: tab.title,
-          message: 'Last night, your schedule and smart alarm.',
-        ),
+        titleController: title,
+        icon: tab.glyph,
+        title: tab.title,
+        message: 'Last night, your schedule and smart alarm.',
+      ),
       HaloTab.health => TabPlaceholder(
-          titleController: title,
-          icon: tab.glyph,
-          title: tab.title,
-          message: 'Every category, Health Age and Medical ID.',
-        ),
+        titleController: title,
+        icon: tab.glyph,
+        title: tab.title,
+        message: 'Every category, Health Age and Medical ID.',
+      ),
     };
   }
 }

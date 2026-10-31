@@ -19,11 +19,8 @@ Future<String?> showAvatarSheet(
 }) {
   return showHaloSheet<String>(
     context,
-    builder: (context, controller) => _AvatarSheet(
-      controller: controller,
-      name: name,
-      initial: current,
-    ),
+    builder: (context, controller) =>
+        _AvatarSheet(controller: controller, name: name, initial: current),
   );
 }
 

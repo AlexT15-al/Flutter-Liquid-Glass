@@ -102,6 +102,13 @@ abstract final class HaloColors {
     color: Color(0xFFFF9500),
     darkColor: Color(0xFFFF9F0A),
   );
+
+  /// Steps: green, set apart from the orange of distance beside it.
+  static const steps = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFF34C759),
+    darkColor: Color(0xFF30D158),
+  );
+
   static const body = CupertinoDynamicColor.withBrightness(
     color: Color(0xFFAF52DE),
     darkColor: Color(0xFFBF5AF2),

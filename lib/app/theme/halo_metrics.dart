@@ -66,11 +66,13 @@ abstract final class HaloMetrics {
   /// the bar over the home indicator; Android's three-button navigation is
   /// opaque and has to be cleared as well.
   static double bottomInset(BuildContext context) {
-    final isApple = defaultTargetPlatform == TargetPlatform.iOS ||
+    final isApple =
+        defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
     final system = isApple ? 0.0 : MediaQuery.viewPaddingOf(context).bottom;
-    final accessory =
-        ChromeAccessoryScope.isShowing(context) ? accessoryHeight + 8 : 0.0;
+    final accessory = ChromeAccessoryScope.isShowing(context)
+        ? accessoryHeight + 8
+        : 0.0;
     return tabBarHeight + 2 * tabBarVerticalPadding + 16 + system + accessory;
   }
 

@@ -46,9 +46,9 @@ class _EditTodaySheetState extends State<_EditTodaySheet> {
   late List<TodayCard> _shown = List.of(widget.initial);
 
   List<TodayCard> get _hidden => [
-        for (final card in TodayCard.values)
-          if (!_shown.contains(card)) card,
-      ];
+    for (final card in TodayCard.values)
+      if (!_shown.contains(card)) card,
+  ];
 
   void _update(List<TodayCard> next) {
     setState(() => _shown = next);
@@ -60,18 +60,15 @@ class _EditTodaySheetState extends State<_EditTodaySheet> {
     // `GlassListTile` replaces the ambient text style rather than merging into
     // it, so the row title is given the app's own style explicitly. Otherwise
     // it would drop the app font the moment one is set.
-    final rowTitle = DefaultTextStyle.of(context).style.copyWith(
-          color: HaloColors.labelOf(context),
-          fontSize: 17,
-        );
+    final rowTitle = DefaultTextStyle.of(
+      context,
+    ).style.copyWith(color: HaloColors.labelOf(context), fontSize: 17);
 
     return HaloSheet(
       controller: widget.controller,
       header: HaloSheetHeader(
         title: 'Edit Summary',
-        trailing: SheetConfirmButton(
-          onTap: () => Navigator.of(context).pop(),
-        ),
+        trailing: SheetConfirmButton(onTap: () => Navigator.of(context).pop()),
       ),
       children: [
         const SectionCaption('Shown on Today'),

@@ -48,11 +48,13 @@ class StepTracker with WidgetsBindingObserver {
     Stream<int> Function()? counterStream,
     DateTime Function()? clock,
     bool? requiresPermission,
-  })  : _counterStream = counterStream ??
-            (() => Pedometer.stepCountStream.map((event) => event.steps)),
-        _clock = clock ?? DateTime.now,
-        _requiresPermission =
-            requiresPermission ?? defaultTargetPlatform == TargetPlatform.android;
+  }) : _counterStream =
+           counterStream ??
+           (() => Pedometer.stepCountStream.map((event) => event.steps)),
+       _clock = clock ?? DateTime.now,
+       _requiresPermission =
+           requiresPermission ??
+           defaultTargetPlatform == TargetPlatform.android;
 
   final HaloPreferences _preferences;
   final Stream<int> Function() _counterStream;
@@ -94,8 +96,9 @@ class StepTracker with WidgetsBindingObserver {
     _stored = await _preferences.readStepCounter();
 
     if (_requiresPermission) {
-      final status =
-          await AndroidPermissions.status(AndroidPermissions.activityRecognition);
+      final status = await AndroidPermissions.status(
+        AndroidPermissions.activityRecognition,
+      );
       access.value = _accessFrom(status);
       if (access.value == StepAccess.granted) _listen();
     } else {
@@ -106,8 +109,9 @@ class StepTracker with WidgetsBindingObserver {
   /// Asks for access, from a button the user pressed.
   Future<void> requestAccess() async {
     if (_requiresPermission) {
-      final current =
-          await AndroidPermissions.status(AndroidPermissions.activityRecognition);
+      final current = await AndroidPermissions.status(
+        AndroidPermissions.activityRecognition,
+      );
       if (current == PermissionState.permanentlyDenied) {
         // The prompt will not show again; Settings is the only way back.
         await AndroidPermissions.openSettings();
@@ -124,12 +128,12 @@ class StepTracker with WidgetsBindingObserver {
   }
 
   static StepAccess _accessFrom(PermissionState status) => switch (status) {
-        PermissionState.granted => StepAccess.granted,
-        // Never asked and refused look the same to Android; the card offers
-        // Allow either way, and a permanent refusal sends the tap to Settings.
-        PermissionState.denied => StepAccess.unknown,
-        PermissionState.permanentlyDenied => StepAccess.denied,
-      };
+    PermissionState.granted => StepAccess.granted,
+    // Never asked and refused look the same to Android; the card offers
+    // Allow either way, and a permanent refusal sends the tap to Settings.
+    PermissionState.denied => StepAccess.unknown,
+    PermissionState.permanentlyDenied => StepAccess.denied,
+  };
 
   void _listen() {
     if (_subscription != null) return;

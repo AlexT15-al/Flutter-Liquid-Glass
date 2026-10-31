@@ -7,6 +7,7 @@ import 'package:halo/app/halo_scope.dart';
 import 'package:halo/data/activity/activity_store.dart';
 import 'package:halo/data/activity/step_tracker.dart';
 import 'package:halo/data/database/app_database.dart';
+import 'package:halo/data/location/location_tracker.dart';
 import 'package:halo/data/preferences/halo_preferences.dart';
 import 'package:halo/data/workouts/workout_repository.dart';
 import 'package:halo/features/workout/live/workout_controller.dart';
@@ -14,8 +15,14 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 /// The whole app over an in-memory database, wired the way `main` wires it.
 class Harness {
-  Harness._(this.db, this.preferences, this.activity, this.steps,
-      this.workouts, this.workoutController);
+  Harness._(
+    this.db,
+    this.preferences,
+    this.activity,
+    this.steps,
+    this.workouts,
+    this.workoutController,
+  );
 
   final AppDatabase db;
   final HaloPreferences preferences;
@@ -29,6 +36,8 @@ class Harness {
   static Future<Harness> create(
     WidgetTester tester, {
     Future<void> Function(Harness harness)? seed,
+    LocationTracker? location,
+    DateTime Function()? clock,
   }) async {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     final db = AppDatabase.forExecutor(
@@ -54,9 +63,17 @@ class Harness {
     final controller = WorkoutController(
       repository: workouts,
       stepCounter: steps.latestCount,
+      location: location,
+      clock: clock,
     );
-    final harness =
-        Harness._(db, preferences, activity, steps, workouts, controller);
+    final harness = Harness._(
+      db,
+      preferences,
+      activity,
+      steps,
+      workouts,
+      controller,
+    );
     await tester.runAsync(() async {
       await activity.load();
       await seed?.call(harness);
@@ -66,19 +83,19 @@ class Harness {
   }
 
   Widget get app => HaloScope(
-        database: db,
-        preferences: preferences,
-        activity: activity,
-        steps: steps,
-        workouts: workouts,
-        child: LiquidGlassWidgets.wrap(
-          theme: const GlassThemeData.ios27(),
-          child: WorkoutScope(
-            controller: workoutController,
-            child: const HaloApp(),
-          ),
-        ),
-      );
+    database: db,
+    preferences: preferences,
+    activity: activity,
+    steps: steps,
+    workouts: workouts,
+    child: LiquidGlassWidgets.wrap(
+      theme: const GlassThemeData.ios27(),
+      child: WorkoutScope(
+        controller: workoutController,
+        child: const HaloApp(),
+      ),
+    ),
+  );
 
   /// Unmounts first, so the pages' database streams are cancelled; the
   /// database itself is left to the test isolate.

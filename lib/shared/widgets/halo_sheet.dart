@@ -21,7 +21,7 @@ import '../../app/theme/halo_metrics.dart';
 Future<T?> showHaloSheet<T>(
   BuildContext context, {
   required Widget Function(BuildContext context, ScrollController controller)
-      builder,
+  builder,
   bool nested = false,
 }) {
   final media = MediaQuery.of(context);

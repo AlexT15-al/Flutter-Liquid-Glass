@@ -12,8 +12,8 @@ enum AppThemeMode {
 
   /// What the Cupertino theme pins. Null follows the device.
   Brightness? get brightness => switch (this) {
-        AppThemeMode.system => null,
-        AppThemeMode.light => Brightness.light,
-        AppThemeMode.dark => Brightness.dark,
-      };
+    AppThemeMode.system => null,
+    AppThemeMode.light => Brightness.light,
+    AppThemeMode.dark => Brightness.dark,
+  };
 }

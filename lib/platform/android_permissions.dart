@@ -19,26 +19,23 @@ abstract final class AndroidPermissions {
   static const _channel = MethodChannel('halo/permissions');
 
   static const activityRecognition = 'android.permission.ACTIVITY_RECOGNITION';
+  static const postNotifications = 'android.permission.POST_NOTIFICATIONS';
 
-  static Future<PermissionState> status(String permission) async =>
-      _parse(await _channel.invokeMethod<String>(
-        'status',
-        {'permission': permission},
-      ));
+  static Future<PermissionState> status(String permission) async => _parse(
+    await _channel.invokeMethod<String>('status', {'permission': permission}),
+  );
 
   /// Shows the system prompt if it still can, and returns the outcome.
-  static Future<PermissionState> request(String permission) async =>
-      _parse(await _channel.invokeMethod<String>(
-        'request',
-        {'permission': permission},
-      ));
+  static Future<PermissionState> request(String permission) async => _parse(
+    await _channel.invokeMethod<String>('request', {'permission': permission}),
+  );
 
   /// Opens the app's page in system Settings.
   static Future<void> openSettings() => _channel.invokeMethod('openSettings');
 
   static PermissionState _parse(String? value) => switch (value) {
-        'granted' => PermissionState.granted,
-        'permanentlyDenied' => PermissionState.permanentlyDenied,
-        _ => PermissionState.denied,
-      };
+    'granted' => PermissionState.granted,
+    'permanentlyDenied' => PermissionState.permanentlyDenied,
+    _ => PermissionState.denied,
+  };
 }

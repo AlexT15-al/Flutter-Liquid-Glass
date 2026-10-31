@@ -31,15 +31,14 @@ abstract final class HaloMotion {
   /// A ring or a gauge filling to its value. Slower than [standard] so the fill
   /// is something you watch rather than a jump; no bounce, because a value
   /// overshooting reads as the number being wrong for a moment.
-  static SpringDescription get fill => GlassSpring.smooth(
-        duration: const Duration(milliseconds: 900),
-      );
+  static SpringDescription get fill =>
+      GlassSpring.smooth(duration: const Duration(milliseconds: 900));
 
   /// Modal sheets: 0.3s with a little bounce, Apple's published drawer values.
   static SpringDescription get sheet => SpringDescription.withDurationAndBounce(
-        duration: const Duration(milliseconds: 300),
-        bounce: 0.2,
-      );
+    duration: const Duration(milliseconds: 300),
+    bounce: 0.2,
+  );
 
   // ── Curves, for implicit animations ────────────────────────────────────────
 

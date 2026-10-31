@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Icons;
 
 import '../../../app/theme/halo_colors.dart';
 
@@ -15,8 +16,8 @@ enum TodayCard {
   ),
   steps(
     title: 'Steps',
-    icon: CupertinoIcons.flame_fill,
-    color: HaloColors.activity,
+    icon: Icons.directions_walk_rounded,
+    color: HaloColors.steps,
   ),
   distance(
     title: 'Distance',

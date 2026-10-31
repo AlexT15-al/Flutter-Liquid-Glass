@@ -10,9 +10,14 @@ import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_glass.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../app/theme/halo_motion.dart';
+import '../../../data/location/location_tracker.dart';
 import '../../../data/workouts/workout_session.dart';
+import '../../../domain/route.dart';
+import '../../../domain/workout.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/halo_card.dart';
+import '../widgets/route_map.dart';
+import '../widgets/route_sections.dart';
 import 'workout_controller.dart';
 
 /// The live workout, full screen, growing out of its pill and back.
@@ -50,9 +55,9 @@ class _WorkoutLayerState extends State<WorkoutLayer>
   /// Thrown motion overshoots a little; this one is always thrown or tapped.
   static final SpringDescription _spring =
       SpringDescription.withDurationAndBounce(
-    duration: const Duration(milliseconds: 420),
-    bounce: 0.14,
-  );
+        duration: const Duration(milliseconds: 420),
+        bounce: 0.14,
+      );
 
   @override
   void initState() {
@@ -123,7 +128,8 @@ class _WorkoutLayerState extends State<WorkoutLayer>
 
     final size = MediaQuery.sizeOf(context);
     final full = Offset.zero & size;
-    final from = _from ??
+    final from =
+        _from ??
         Rect.fromLTWH(
           HaloMetrics.tabBarHorizontalPadding,
           size.height - 170,
@@ -141,8 +147,9 @@ class _WorkoutLayerState extends State<WorkoutLayer>
         Positioned.fill(
           child: IgnorePointer(
             child: ColoredBox(
-              color: const Color(0xFF000000)
-                  .withValues(alpha: 0.4 * eased.clamp(0.0, 1.0)),
+              color: const Color(
+                0xFF000000,
+              ).withValues(alpha: 0.4 * eased.clamp(0.0, 1.0)),
             ),
           ),
         ),
@@ -174,16 +181,16 @@ class _WorkoutLayerState extends State<WorkoutLayer>
                       listenable: session,
                       builder: (context, _) => switch (session.phase) {
                         SessionPhase.countdown => _Countdown(
-                            onSkip: widget.controller.skipCountdown,
-                          ),
+                          onSkip: widget.controller.skipCountdown,
+                        ),
                         SessionPhase.ended => _Summary(
-                            session: session,
-                            controller: widget.controller,
-                          ),
+                          session: session,
+                          controller: widget.controller,
+                        ),
                         _ => _Live(
-                            session: session,
-                            onMinimize: widget.controller.minimize,
-                          ),
+                          session: session,
+                          onMinimize: widget.controller.minimize,
+                        ),
                       },
                     ),
                   ),
@@ -337,7 +344,6 @@ class _Live extends StatelessWidget {
     final padding = MediaQuery.paddingOf(context);
     final accent = HaloColors.accent.resolveFrom(context);
     final paused = session.phase == SessionPhase.paused;
-    final progress = session.goalProgress;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -373,40 +379,12 @@ class _Live extends StatelessWidget {
               ],
             ),
           ),
-          const Spacer(),
-          // Says it is paused without hiding the time it paused at.
-          AnimatedOpacity(
-            opacity: paused ? 1 : 0,
-            duration: HaloMotion.of(context, HaloMotion.controlSwapDuration),
-            child: Text(
-              'PAUSED',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: HaloColors.secondaryLabelOf(context),
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
-            ),
+          Expanded(
+            child: session.followsGps
+                ? _LivePages(session: session)
+                : _Readout(session: session),
           ),
-          Text(
-            Format.clock(session.elapsed),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: accent,
-              fontSize: 88,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -2,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          if (progress != null) ...[
-            const SizedBox(height: 8),
-            _GoalBar(progress: progress, label: session.goal.describe),
-          ],
-          const SizedBox(height: 28),
-          _Metrics(session: session),
-          const Spacer(flex: 2),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -435,6 +413,232 @@ class _Live extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The time, the goal and the numbers: the live workout's main page.
+class _Readout extends StatelessWidget {
+  const _Readout({required this.session});
+
+  final WorkoutSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = HaloColors.accent.resolveFrom(context);
+    final paused = session.phase == SessionPhase.paused;
+    final progress = session.goalProgress;
+    final note = switch (session.locationAccess) {
+      LocationAccess.denied =>
+        'Location is off for Halo, so distance comes '
+            'from your steps.',
+      LocationAccess.serviceOff =>
+        'Location Services are off, so distance comes from your steps.',
+      _ => session.followsGps && !session.hasRoute ? 'Finding GPS…' : null,
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Spacer(),
+        // Says it is paused without hiding the time it paused at.
+        AnimatedOpacity(
+          opacity: paused ? 1 : 0,
+          duration: HaloMotion.of(context, HaloMotion.controlSwapDuration),
+          child: Text(
+            'PAUSED',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: HaloColors.secondaryLabelOf(context),
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            Format.clock(session.elapsed),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: accent,
+              fontSize: 88,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -2,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        if (progress != null) ...[
+          const SizedBox(height: 8),
+          _GoalBar(progress: progress, label: session.goal.describe),
+        ],
+        const SizedBox(height: 28),
+        _Metrics(session: session),
+        if (note != null) ...[
+          const SizedBox(height: 18),
+          Text(
+            note,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: HaloColors.secondaryLabelOf(context),
+              fontSize: 13,
+            ),
+          ),
+        ],
+        const Spacer(flex: 2),
+      ],
+    );
+  }
+}
+
+/// For a GPS workout: the readout, and a swipe away, the map.
+class _LivePages extends StatefulWidget {
+  const _LivePages({required this.session});
+
+  final WorkoutSession session;
+
+  @override
+  State<_LivePages> createState() => _LivePagesState();
+}
+
+class _LivePagesState extends State<_LivePages> {
+  final PageController _pages = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = HaloColors.labelOf(context);
+
+    return Column(
+      children: [
+        Expanded(
+          child: PageView(
+            controller: _pages,
+            onPageChanged: (page) {
+              HapticFeedback.selectionClick();
+              setState(() => _page = page);
+            },
+            children: [
+              _Readout(session: widget.session),
+              _LiveMap(session: widget.session),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Semantics(
+          label: _page == 0 ? 'Page 1 of 2' : 'Page 2 of 2',
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < 2; i++)
+                AnimatedContainer(
+                  duration: HaloMotion.of(
+                    context,
+                    HaloMotion.controlSwapDuration,
+                  ),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: label.withValues(alpha: i == _page ? 0.9 : 0.25),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The route so far, following the phone, with the time and distance over it
+/// on glass: the one piece of chrome on the page, floating over content.
+class _LiveMap extends StatelessWidget {
+  const _LiveMap({required this.session});
+
+  final WorkoutSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final speed = session.type == WorkoutType.outdoorCycle;
+    final pace = session.currentPace ?? session.pace;
+    final cells = <(String, String)>[
+      (Format.clock(session.elapsed), 'TIME'),
+      (session.distanceKm.toStringAsFixed(2), 'KM'),
+      if (speed)
+        (pace == null ? '—' : SplitsCard.kmh(pace).toStringAsFixed(1), 'KM/H')
+      else
+        (pace == null ? '—' : Format.pace(pace), 'PACE'),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: ClipRSuperellipse(
+        borderRadius: BorderRadius.circular(HaloMetrics.cardRadius),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: RouteMap(
+                route: session.route,
+                position: session.position,
+                follow: true,
+              ),
+            ),
+            Positioned(
+              left: 10,
+              right: 10,
+              top: 10,
+              child: GlassContainer(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+                settings: HaloGlass.of(context),
+                quality: HaloGlass.quality,
+                useOwnLayer: true,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    for (final (value, unit) in cells)
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              value,
+                              style: TextStyle(
+                                color: HaloColors.labelOf(context),
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              unit,
+                              style: TextStyle(
+                                color: HaloColors.secondaryLabelOf(context),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -491,22 +695,44 @@ class _Metrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pace = session.pace;
+    final type = session.type;
+    final current = session.currentPace ?? pace;
+    final distance = (
+      session.distanceKm.toStringAsFixed(2),
+      'KM',
+      HaloColors.activeHours.resolveFrom(context),
+    );
     final cells = <(String, String, Color)>[
       (
         Format.integer(session.activeKcal),
         'ACTIVE KCAL',
         HaloColors.move.resolveFrom(context),
       ),
-      if (session.type.steps) ...[
+      if (type.gps) ...[
+        distance,
+        if (type == WorkoutType.outdoorCycle)
+          (
+            current == null ? '—' : SplitsCard.kmh(current).toStringAsFixed(1),
+            'KM/H',
+            HaloColors.labelOf(context),
+          )
+        else
+          (
+            current == null ? '—' : Format.pace(current),
+            'PACE /KM',
+            HaloColors.labelOf(context),
+          ),
         (
-          session.distanceKm.toStringAsFixed(2),
-          'KM',
-          HaloColors.activeHours.resolveFrom(context),
+          Format.integer(session.elevationGainM),
+          'M CLIMBED',
+          CupertinoColors.systemOrange.resolveFrom(context),
         ),
+      ] else if (type.steps) ...[
+        distance,
         (
           Format.integer(session.steps),
           'STEPS',
-          HaloColors.activity.resolveFrom(context),
+          HaloColors.steps.resolveFrom(context),
         ),
         (
           pace == null ? '—' : Format.pace(pace),
@@ -660,15 +886,23 @@ class _SummaryState extends State<_Summary> {
     final padding = MediaQuery.paddingOf(context);
     final accent = HaloColors.accent.resolveFrom(context);
 
+    final type = session.type;
+    final pace = session.pace;
     final rows = <(String, String)>[
       ('Workout Time', Format.clock(session.elapsed)),
       ('Active Energy', '${Format.integer(session.activeKcal)} kcal'),
-      if (session.type.steps) ...[
+      if (type.hasDistance && session.distanceKm > 0)
         ('Distance', '${session.distanceKm.toStringAsFixed(2)} km'),
+      if (type.steps && session.steps > 0)
         ('Steps', Format.integer(session.steps)),
-        if (session.pace != null) ('Avg. Pace', '${Format.pace(session.pace!)} /km'),
-      ],
+      if (pace != null && type == WorkoutType.outdoorCycle)
+        ('Avg. Speed', '${SplitsCard.kmh(pace).toStringAsFixed(1)} km/h')
+      else if (pace != null)
+        ('Avg. Pace', '${Format.pace(pace)} /km'),
+      if (session.hasRoute)
+        ('Elevation Gain', '${Format.integer(session.elevationGainM)} m'),
     ];
+    final splits = session.hasRoute ? session.splits : const <RouteSplit>[];
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -709,6 +943,10 @@ class _SummaryState extends State<_Summary> {
           ),
         ),
         const SizedBox(height: 24),
+        if (session.hasRoute) ...[
+          RouteMapCard(route: session.route),
+          const SizedBox(height: HaloMetrics.cardGap),
+        ],
         HaloCard(
           child: Column(
             children: [
@@ -745,6 +983,10 @@ class _SummaryState extends State<_Summary> {
             ],
           ),
         ),
+        if (splits.isNotEmpty) ...[
+          const WorkoutSectionTitle('Splits'),
+          SplitsCard(splits: splits, type: type),
+        ],
         const SizedBox(height: 24),
         Padding(
           padding: const EdgeInsets.only(left: 16, bottom: 8),
@@ -799,11 +1041,11 @@ class _EffortPicker extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   static String describe(int effort) => switch (effort) {
-        <= 3 => 'Easy',
-        <= 6 => 'Moderate',
-        <= 8 => 'Hard',
-        _ => 'All Out',
-      };
+    <= 3 => 'Easy',
+    <= 6 => 'Moderate',
+    <= 8 => 'Hard',
+    _ => 'All Out',
+  };
 
   @override
   Widget build(BuildContext context) {

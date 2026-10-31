@@ -117,11 +117,7 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
     // The controller is read inside the entry's builder: an OverlayEntry does
     // not rebuild with its parent, so a dependency taken out here would leave
     // the tab bar frozen on its first state.
-    return Overlay(
-      initialEntries: [
-        OverlayEntry(builder: _buildLayers),
-      ],
-    );
+    return Overlay(initialEntries: [OverlayEntry(builder: _buildLayers)]);
   }
 
   Widget _buildLayers(BuildContext context) {
@@ -157,8 +153,10 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
                   ignoring: covered,
                   child: AnimatedSlide(
                     offset: covered ? const Offset(0, 1.3) : Offset.zero,
-                    duration:
-                        HaloMotion.of(context, HaloMotion.standardDuration),
+                    duration: HaloMotion.of(
+                      context,
+                      HaloMotion.standardDuration,
+                    ),
                     curve: HaloMotion.standardCurve,
                     child: bar,
                   ),
@@ -261,11 +259,7 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
       ),
       tabs: [
         for (final tab in HaloTab.values)
-          GlassTab(
-            label: tab.title,
-            icon: tab.glyph,
-            activeIcon: tab.glyph,
-          ),
+          GlassTab(label: tab.title, icon: tab.glyph, activeIcon: tab.glyph),
       ],
     );
   }

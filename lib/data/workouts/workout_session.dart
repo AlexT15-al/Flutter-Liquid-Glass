@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/body_profile.dart';
+import '../../domain/route.dart';
+import '../location/location_tracker.dart';
 import '../../domain/workout.dart';
 
 /// Where a live workout is.
@@ -15,20 +17,31 @@ enum SessionPhase { countdown, running, paused, ended }
 /// dropped or the app sent to the background never loses a second. Steps come
 /// from the phone's cumulative counter: the difference between readings while
 /// running, so steps taken during a pause do not count.
+///
+/// Outdoors the route comes from GPS: fixes taken while running are kept, each
+/// stamped with the moving time and the stretch of moving it belongs to, and
+/// distance, pace, climb and splits are read off them. Without a single good
+/// fix (indoors, or GPS refused) distance falls back to the step counter.
 class WorkoutSession extends ChangeNotifier {
   WorkoutSession({
     required this.type,
     required this.goal,
     required this._profile,
     required ValueListenable<int?> stepCounter,
+    Stream<RoutePoint>? locations,
+    this.locationAccess,
     DateTime Function()? clock,
-  })  : _counter = stepCounter,
-        _clock = clock ?? DateTime.now {
+  }) : _counter = stepCounter,
+       _clock = clock ?? DateTime.now {
     _counter.addListener(_onSteps);
+    _locations = locations?.listen(_onFix);
   }
 
   final WorkoutType type;
   final WorkoutGoal goal;
+
+  /// For an outdoor workout, whether GPS could be used; null indoors.
+  final LocationAccess? locationAccess;
   final BodyProfile _profile;
   final ValueListenable<int?> _counter;
   final DateTime Function() _clock;
@@ -52,6 +65,32 @@ class WorkoutSession extends ChangeNotifier {
   int? _lastCount;
   Timer? _timer;
 
+  StreamSubscription<RoutePoint>? _locations;
+  final List<RoutePoint> _route = [];
+  int _segment = 0;
+
+  /// Kept up to date as fixes arrive rather than summed on every read: the
+  /// screen asks several times a second.
+  double _routeM = 0;
+
+  /// Fixes closer than this to the last one kept are dropped: standing still,
+  /// GPS wanders a few metres and would add distance nobody moved.
+  static const double _minStepM = 3;
+
+  /// The route so far.
+  List<RoutePoint> get route => List.unmodifiable(_route);
+
+  /// Whether GPS has given anything usable yet.
+  bool get hasRoute => _route.length > 1;
+
+  /// Whether this workout listens to GPS at all.
+  bool get followsGps => _locations != null;
+
+  /// Where the phone is, for the map's position dot: the latest fix in any
+  /// phase, so the map can show it during the countdown and while paused.
+  RoutePoint? get position => _position;
+  RoutePoint? _position;
+
   DateTime? get startedAt => _startedAt;
 
   /// Moving time: running stretches only.
@@ -64,9 +103,10 @@ class WorkoutSession extends ChangeNotifier {
 
   int get steps => _steps;
 
-  /// From the step counter for walking and running; nothing the phone can
-  /// measure for the rest until GPS arrives.
+  /// From the route when there is one; otherwise from the step counter for
+  /// walking and running; nothing for the rest.
   double get distanceKm {
+    if (hasRoute) return _routeM / 1000;
     if (!type.steps) return 0;
     final running =
         type == WorkoutType.outdoorRun || type == WorkoutType.indoorRun;
@@ -79,18 +119,23 @@ class WorkoutSession extends ChangeNotifier {
     return (type.met - 1) * _profile.weightKg * hours;
   }
 
-  /// Minutes per kilometre, or null before there is any distance.
+  /// Average minutes per kilometre, or null before there is any distance.
   Duration? get pace {
     final km = distanceKm;
     if (km < 0.05) return null;
     return Duration(milliseconds: (elapsed.inMilliseconds / km).round());
   }
 
-  double? get goalProgress => goal.progress(
-        elapsed: elapsed,
-        distanceKm: distanceKm,
-        kcal: activeKcal,
-      );
+  /// Pace over the last half minute, from GPS.
+  Duration? get currentPace => RouteMath.recentPace(_route);
+
+  /// Metres climbed, from GPS altitude.
+  double get elevationGainM => RouteMath.elevationGainM(_route);
+
+  List<RouteSplit> get splits => RouteMath.splits(_route);
+
+  double? get goalProgress =>
+      goal.progress(elapsed: elapsed, distanceKm: distanceKm, kcal: activeKcal);
 
   /// Ends the countdown and starts the clock.
   void begin() {
@@ -116,6 +161,8 @@ class WorkoutSession extends ChangeNotifier {
   void resume() {
     if (_phase != SessionPhase.paused) return;
     _resumedAt = _clock();
+    // Whatever was walked while paused is not bridged.
+    if (_route.isNotEmpty) _segment++;
     // Steps taken while paused are not the workout's.
     _lastCount = _counter.value;
     _phase = SessionPhase.running;
@@ -131,24 +178,48 @@ class WorkoutSession extends ChangeNotifier {
     _startedAt ??= _endedAt;
     _phase = SessionPhase.ended;
     _timer?.cancel();
+    // GPS off the moment the workout ends: on Android this also stops the
+    // foreground service and takes its notification down.
+    _locations?.cancel();
+    _locations = null;
     notifyListeners();
   }
 
   /// The finished workout, ready to store.
   WorkoutRecord toRecord({int? effort}) => WorkoutRecord(
-        type: type,
-        start: _startedAt ?? _clock(),
-        end: _endedAt ?? _clock(),
-        activeDuration: elapsed,
-        distanceKm: distanceKm,
-        activeKcal: activeKcal,
-        steps: _steps,
-        effort: effort,
-      );
+    type: type,
+    start: _startedAt ?? _clock(),
+    end: _endedAt ?? _clock(),
+    activeDuration: elapsed,
+    distanceKm: distanceKm,
+    activeKcal: activeKcal,
+    steps: _steps,
+    effort: effort,
+    elevationGainM: hasRoute ? elevationGainM : 0,
+    route: List.unmodifiable(_route),
+  );
 
   void _startTicking() {
     _timer?.cancel();
     _timer = Timer.periodic(_tick, (_) => notifyListeners());
+  }
+
+  void _onFix(RoutePoint fix) {
+    if (_phase == SessionPhase.ended) return;
+    _position = fix;
+    if (_phase != SessionPhase.running) {
+      notifyListeners();
+      return;
+    }
+    final stamped = fix.withProgress(elapsed: elapsed, segment: _segment);
+    final last = _route.isEmpty ? null : _route.last;
+    if (last != null && last.segment == _segment) {
+      final step = RouteMath.distanceM(last, stamped);
+      if (step < _minStepM) return;
+      _routeM += step;
+    }
+    _route.add(stamped);
+    notifyListeners();
   }
 
   void _onSteps() {
@@ -165,6 +236,7 @@ class WorkoutSession extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _locations?.cancel();
     _counter.removeListener(_onSteps);
     super.dispose();
   }

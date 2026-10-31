@@ -27,8 +27,8 @@ class ActivityStore extends ChangeNotifier {
     required this._preferences,
     required this._workouts,
     DateTime Function()? clock,
-  })  : _db = database,
-        _clock = clock ?? DateTime.now;
+  }) : _db = database,
+       _clock = clock ?? DateTime.now;
 
   final AppDatabase _db;
   final HaloPreferences _preferences;
@@ -74,22 +74,28 @@ class ActivityStore extends ChangeNotifier {
       ..addAll(rows.map(_spanFrom));
 
     _subscriptions
-      ..add(_preferences.watchProfile().listen((value) {
-        _profile = value;
-        _changed();
-      }))
-      ..add(_preferences.watchGoals().listen((value) {
-        _goals = value;
-        _changed();
-      }))
+      ..add(
+        _preferences.watchProfile().listen((value) {
+          _profile = value;
+          _changed();
+        }),
+      )
+      ..add(
+        _preferences.watchGoals().listen((value) {
+          _goals = value;
+          _changed();
+        }),
+      )
       // Saved workouts fill the rings too. Followed rather than read once, so
       // a workout saved or deleted shows on Today at once.
-      ..add(_workouts
-          .watchBetween(from, DateTime(now.year + 1, now.month, now.day))
-          .listen((value) {
-        _workoutRecords = value;
-        _changed();
-      }));
+      ..add(
+        _workouts
+            .watchBetween(from, DateTime(now.year + 1, now.month, now.day))
+            .listen((value) {
+              _workoutRecords = value;
+              _changed();
+            }),
+      );
 
     _loaded = true;
     _changed();
@@ -163,10 +169,10 @@ class ActivityStore extends ChangeNotifier {
   }
 
   static StepSpan _spanFrom(StepInterval row) => StepSpan(
-        start: DateTime.fromMillisecondsSinceEpoch(row.startMs),
-        end: DateTime.fromMillisecondsSinceEpoch(row.endMs),
-        steps: row.steps,
-      );
+    start: DateTime.fromMillisecondsSinceEpoch(row.startMs),
+    end: DateTime.fromMillisecondsSinceEpoch(row.endMs),
+    steps: row.steps,
+  );
 
   @override
   void dispose() {

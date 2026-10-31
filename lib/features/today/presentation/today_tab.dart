@@ -103,8 +103,7 @@ class _TodayTabState extends State<TodayTab> {
               ActivityCard(
                 summary: summary,
                 goals: activity.goals,
-                onTap: () =>
-                    Navigator.of(context).push(ActivityPage.route()),
+                onTap: () => Navigator.of(context).push(ActivityPage.route()),
               ),
               if (access != StepAccess.granted) ...[
                 const SizedBox(height: HaloMetrics.cardGap),
@@ -153,7 +152,9 @@ class _TodayTabState extends State<TodayTab> {
     StepAccess access,
     DateTime now,
   ) {
-    if (row.first.wide) return _buildCard(context, row.first, summary, access, now);
+    if (row.first.wide) {
+      return _buildCard(context, row.first, summary, access, now);
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,41 +187,41 @@ class _TodayTabState extends State<TodayTab> {
     return switch (card) {
       TodayCard.readiness => ReadinessCard(onTap: open),
       TodayCard.steps => MetricTile(
-          title: card.title,
-          icon: card.icon,
+        title: card.title,
+        icon: card.icon,
+        color: color,
+        caption: 'Today',
+        value: counting ? Format.integer(summary.steps) : null,
+        unit: 'steps',
+        chart: HourlyBars(
+          values: summary.hourlySteps,
           color: color,
-          caption: 'Today',
-          value: counting ? Format.integer(summary.steps) : null,
-          unit: 'steps',
-          chart: HourlyBars(
-            values: summary.hourlySteps,
-            color: color,
-            trackColor: HaloColors.fill.resolveFrom(context),
-            upToHour: now.hour,
-          ),
-          onTap: open,
+          trackColor: HaloColors.fill.resolveFrom(context),
+          upToHour: now.hour,
         ),
+        onTap: open,
+      ),
       TodayCard.distance => MetricTile(
-          title: card.title,
-          icon: card.icon,
+        title: card.title,
+        icon: card.icon,
+        color: color,
+        caption: 'Today',
+        value: counting ? Format.decimal(summary.distanceKm) : null,
+        unit: 'km',
+        chart: HourlyBars(
+          values: summary.hourlySteps,
           color: color,
-          caption: 'Today',
-          value: counting ? Format.decimal(summary.distanceKm) : null,
-          unit: 'km',
-          chart: HourlyBars(
-            values: summary.hourlySteps,
-            color: color,
-            trackColor: HaloColors.fill.resolveFrom(context),
-            upToHour: now.hour,
-          ),
-          onTap: open,
+          trackColor: HaloColors.fill.resolveFrom(context),
+          upToHour: now.hour,
         ),
+        onTap: open,
+      ),
       _ => MetricTile(
-          title: card.title,
-          icon: card.icon,
-          color: color,
-          onTap: open,
-        ),
+        title: card.title,
+        icon: card.icon,
+        color: color,
+        onTap: open,
+      ),
     };
   }
 }

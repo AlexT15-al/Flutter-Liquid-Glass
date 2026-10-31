@@ -28,27 +28,25 @@ class ActivityGoals {
     int? exerciseMinutes,
     int? activeHours,
     int? steps,
-  }) =>
-      ActivityGoals(
-        moveKcal: moveKcal ?? this.moveKcal,
-        exerciseMinutes: exerciseMinutes ?? this.exerciseMinutes,
-        activeHours: activeHours ?? this.activeHours,
-        steps: steps ?? this.steps,
-      );
+  }) => ActivityGoals(
+    moveKcal: moveKcal ?? this.moveKcal,
+    exerciseMinutes: exerciseMinutes ?? this.exerciseMinutes,
+    activeHours: activeHours ?? this.activeHours,
+    steps: steps ?? this.steps,
+  );
 
   Map<String, Object?> toJson() => {
-        'moveKcal': moveKcal,
-        'exerciseMinutes': exerciseMinutes,
-        'activeHours': activeHours,
-        'steps': steps,
-      };
+    'moveKcal': moveKcal,
+    'exerciseMinutes': exerciseMinutes,
+    'activeHours': activeHours,
+    'steps': steps,
+  };
 
   factory ActivityGoals.fromJson(Map<String, Object?> json) => ActivityGoals(
-        moveKcal: (json['moveKcal'] as num?)?.toInt() ?? fallback.moveKcal,
-        exerciseMinutes: (json['exerciseMinutes'] as num?)?.toInt() ??
-            fallback.exerciseMinutes,
-        activeHours:
-            (json['activeHours'] as num?)?.toInt() ?? fallback.activeHours,
-        steps: (json['steps'] as num?)?.toInt() ?? fallback.steps,
-      );
+    moveKcal: (json['moveKcal'] as num?)?.toInt() ?? fallback.moveKcal,
+    exerciseMinutes:
+        (json['exerciseMinutes'] as num?)?.toInt() ?? fallback.exerciseMinutes,
+    activeHours: (json['activeHours'] as num?)?.toInt() ?? fallback.activeHours,
+    steps: (json['steps'] as num?)?.toInt() ?? fallback.steps,
+  );
 }
