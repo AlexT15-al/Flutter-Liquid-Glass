@@ -51,6 +51,19 @@ class NutritionRepository {
         .map((rows) => [for (final r in rows) (r.id, r.ml)]);
   }
 
+  /// Every glass between [from] and [to], as `(id, time, ml)`.
+  Stream<List<(int, DateTime, int)>> watchWaterBetween(
+    DateTime from,
+    DateTime to,
+  ) => _db
+      .watchWaterBetween(from, to)
+      .map(
+        (rows) => [
+          for (final r in rows)
+            (r.id, DateTime.fromMillisecondsSinceEpoch(r.timeMs), r.ml),
+        ],
+      );
+
   Future<void> addWeight(DateTime time, double kg) =>
       _db.insertWeight(time, kg);
 

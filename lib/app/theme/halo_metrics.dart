@@ -60,6 +60,10 @@ abstract final class HaloMetrics {
   /// The pill above the tab bar: a workout in progress.
   static const double accessoryHeight = 50.0;
 
+  /// How far the accessory is drawn below its slot, closing most of the gap
+  /// the tab bar's top padding leaves.
+  static const double accessoryDrop = 12.0;
+
   /// Empty space a page leaves at its bottom so its last row clears the
   /// floating tab bar, and the pill above it while a workout runs. iOS floats
   /// the bar over the home indicator; Android's three-button navigation is

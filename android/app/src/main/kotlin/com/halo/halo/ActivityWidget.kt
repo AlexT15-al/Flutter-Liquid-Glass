@@ -27,9 +27,12 @@ import java.util.Calendar
  * the widget draws from that, so it costs nothing between updates. A
  * snapshot from an earlier day reads as an empty day.
  */
-class ActivityWidget : AppWidgetProvider() {
+open class ActivityWidget : AppWidgetProvider() {
+    /** The compact pill whatever the size, for [ActivityWidgetCompact]. */
+    protected open val compact = false
+
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        for (id in ids) render(context, manager, id)
+        for (id in ids) render(context, manager, id, compact)
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -38,7 +41,7 @@ class ActivityWidget : AppWidgetProvider() {
         id: Int,
         options: Bundle,
     ) {
-        render(context, manager, id)
+        render(context, manager, id, compact)
     }
 
     companion object {
@@ -47,8 +50,14 @@ class ActivityWidget : AppWidgetProvider() {
         /** Redraws every Halo widget on the home screen. */
         fun refresh(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
-            val ids = manager.getAppWidgetIds(ComponentName(context, ActivityWidget::class.java))
-            for (id in ids) render(context, manager, id)
+            for (id in manager.getAppWidgetIds(ComponentName(context, ActivityWidget::class.java))) {
+                render(context, manager, id, compact = false)
+            }
+            for (id in manager.getAppWidgetIds(
+                ComponentName(context, ActivityWidgetCompact::class.java),
+            )) {
+                render(context, manager, id, compact = true)
+            }
         }
 
         fun save(context: Context, values: Map<*, *>) {
@@ -60,7 +69,12 @@ class ActivityWidget : AppWidgetProvider() {
             editor.apply()
         }
 
-        private fun render(context: Context, manager: AppWidgetManager, id: Int) {
+        private fun render(
+            context: Context,
+            manager: AppWidgetManager,
+            id: Int,
+            compact: Boolean,
+        ) {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val today = sameDay(prefs.getLong("updatedAt", 0L))
             fun value(key: String) = if (today) prefs.getFloat(key, 0f) else 0f
@@ -82,17 +96,21 @@ class ActivityWidget : AppWidgetProvider() {
 
             val options = manager.getAppWidgetOptions(id)
             val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
-            val small = minWidth < 200
+            val small = !compact && minWidth < 200
 
             val views = RemoteViews(
                 context.packageName,
-                if (small) R.layout.widget_activity_small else R.layout.widget_activity,
+                when {
+                    compact -> R.layout.widget_activity_compact
+                    small -> R.layout.widget_activity_small
+                    else -> R.layout.widget_activity
+                },
             )
             val density = context.resources.displayMetrics.density
             views.setImageViewBitmap(
                 R.id.widget_rings,
                 rings(
-                    (if (small) 96 else 112) * density,
+                    (if (compact) 58 else if (small) 96 else 112) * density,
                     listOf(
                         move / moveGoal to moveColor,
                         exercise / exerciseGoal to exerciseColor,
@@ -101,8 +119,15 @@ class ActivityWidget : AppWidgetProvider() {
                 ),
             )
             val number = NumberFormat.getIntegerInstance()
-            views.setTextViewText(R.id.widget_steps, "${number.format(steps.toLong())} steps")
-            if (!small) {
+            if (compact) {
+                // Bare numbers beside their glyphs, as Samsung Health's own.
+                views.setTextViewText(R.id.widget_move, number.format(move.toLong()))
+                views.setTextViewText(R.id.widget_exercise, "${exercise.toInt()}")
+                views.setTextViewText(R.id.widget_hours, "${hours.toInt()}")
+            } else {
+                views.setTextViewText(R.id.widget_steps, "${number.format(steps.toLong())} steps")
+            }
+            if (!small && !compact) {
                 views.setTextViewText(
                     R.id.widget_move,
                     "${number.format(move.toLong())}/${number.format(moveGoal.toLong())} KCAL",
@@ -162,6 +187,11 @@ class ActivityWidget : AppWidgetProvider() {
             return bitmap
         }
     }
+}
+
+/** The small pill-shaped widget: rings and three numbers in a row of two cells. */
+class ActivityWidgetCompact : ActivityWidget() {
+    override val compact = true
 }
 
 /** `halo/widget`: the app hands the widget today's numbers. */

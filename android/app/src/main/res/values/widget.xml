@@ -9,6 +9,32 @@
     <string name="widget_move">Move</string>
     <string name="widget_exercise">Exercise</string>
     <string name="widget_active_hours">Active Hours</string>
+    <string name="widget_compact_description">Today\'s rings, small.</string>
+
+    <style name="HaloWidgetCompactRow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:layout_marginBottom">1dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="HaloWidgetCompactIcon">
+        <item name="android:layout_width">18dp</item>
+        <item name="android:layout_height">18dp</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="HaloWidgetCompactValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:textColor">@color/widget_label</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 
     <style name="HaloWidgetLabel">
         <item name="android:layout_width">wrap_content</item>

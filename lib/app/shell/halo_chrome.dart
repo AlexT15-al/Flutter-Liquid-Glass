@@ -191,15 +191,21 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
       // capsule under it; the bottom layout lays the accessory edge to edge.
       bottomAccessory: session == null
           ? null
-          : Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: HaloMetrics.tabBarHorizontalPadding,
-              ),
-              child: WorkoutPill(
-                key: _pillKey,
-                session: session,
-                height: HaloMetrics.accessoryHeight,
-                onOpen: workouts.expand,
+          : Transform.translate(
+              // The bar's own top padding already opens a gap above the
+              // capsule; nudged down so the pill sits close over it, as
+              // Music's mini player does.
+              offset: const Offset(0, HaloMetrics.accessoryDrop),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: HaloMetrics.tabBarHorizontalPadding,
+                ),
+                child: WorkoutPill(
+                  key: _pillKey,
+                  session: session,
+                  height: HaloMetrics.accessoryHeight,
+                  onOpen: workouts.expand,
+                ),
               ),
             ),
       bottomAccessoryHeight: HaloMetrics.accessoryHeight,

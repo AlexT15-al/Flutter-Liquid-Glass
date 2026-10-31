@@ -16,6 +16,7 @@ import '../../../shared/widgets/hourly_bars.dart';
 import '../../../shared/widgets/large_title.dart';
 import '../../../shared/widgets/placeholder_page.dart';
 import '../../activity/presentation/activity_page.dart';
+import '../../nutrition/presentation/water_page.dart';
 import '../../sleep/presentation/night_page.dart';
 import '../../sleep/presentation/sleep_page.dart';
 import '../../sleep/presentation/widgets/hypnogram.dart';
@@ -355,16 +356,20 @@ class _NutritionTileState extends State<_NutritionTile> {
   Widget build(BuildContext context) {
     final card = widget.card;
     void open() => HaloTabScope.read(context).tab = HaloTab.nutrition;
-    MetricTile tile({String? value, String? unit, String? caption}) =>
-        MetricTile(
-          title: card.title,
-          icon: card.icon,
-          color: widget.color,
-          caption: caption,
-          value: value,
-          unit: unit,
-          onTap: open,
-        );
+    MetricTile tile({
+      String? value,
+      String? unit,
+      String? caption,
+      VoidCallback? onTap,
+    }) => MetricTile(
+      title: card.title,
+      icon: card.icon,
+      color: widget.color,
+      caption: caption,
+      value: value,
+      unit: unit,
+      onTap: onTap ?? open,
+    );
 
     return switch (card) {
       TodayCard.water => StreamBuilder<List<(int, int)>>(
@@ -379,6 +384,7 @@ class _NutritionTileState extends State<_NutritionTile> {
             caption: 'Today',
             value: ml == 0 ? null : Format.litres(ml),
             unit: 'L',
+            onTap: () => Navigator.of(context).push(WaterPage.route()),
           );
         },
       ),
