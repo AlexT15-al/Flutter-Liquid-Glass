@@ -17,10 +17,7 @@ void main() {
 
     await tester.tap(find.text('Sleep').last);
     await tester.pump(const Duration(milliseconds: 600));
-    expect(
-      find.text('Last night, your schedule and smart alarm.'),
-      findsOneWidget,
-    );
+    expect(find.text('Start Sleep'), findsOneWidget);
 
     await harness.tearDown(tester);
   });

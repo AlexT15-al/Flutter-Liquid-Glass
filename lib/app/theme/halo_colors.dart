@@ -133,6 +133,25 @@ abstract final class HaloColors {
     color: Color(0xFF5856D6),
     darkColor: Color(0xFF5E5CE6),
   );
+  // Sleep stages: warm for awake, then cooler and darker the deeper the
+  // sleep, so a hypnogram reads top to bottom without its legend.
+  static const sleepAwake = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFFFF6B4A),
+    darkColor: Color(0xFFFF7D5E),
+  );
+  static const sleepRem = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFF32ADE6),
+    darkColor: Color(0xFF64D2FF),
+  );
+  static const sleepLight = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFF007AFF),
+    darkColor: Color(0xFF0A84FF),
+  );
+  static const sleepDeep = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFF5856D6),
+    darkColor: Color(0xFF7D7AFF),
+  );
+
   static const mindfulness = CupertinoDynamicColor.withBrightness(
     color: Color(0xFF32ADE6),
     darkColor: Color(0xFF64D2FF),

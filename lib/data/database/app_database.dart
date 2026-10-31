@@ -75,7 +75,48 @@ class WorkoutPoints extends Table {
   IntColumn get segment => integer()();
 }
 
-@DriftDatabase(tables: [StepIntervals, KeyValues, Workouts, WorkoutPoints])
+/// A night: from getting into bed to getting up. Open (no end) while it is
+/// being tracked.
+@TableIndex(name: 'sleep_sessions_start', columns: {#startMs})
+class SleepSessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get startMs => integer()();
+  IntColumn get endMs => integer().nullable()();
+
+  /// `SleepSource.name`.
+  TextColumn get source => text()();
+
+  /// A letter per minute from the start: the estimated stages. Written when
+  /// tracking ends; empty for a night entered by hand.
+  TextColumn get hypnogram => text().withDefault(const Constant(''))();
+}
+
+/// How much the bed moved in each minute of a tracked night: the raw record
+/// the hypnogram is worked out from, kept so it can be worked out again.
+class SleepMinutes extends Table {
+  IntColumn get sessionId =>
+      integer().references(SleepSessions, #id, onDelete: KeyAction.cascade)();
+
+  /// Minutes since the session started.
+  IntColumn get minute => integer()();
+
+  /// Moments of movement felt in that minute.
+  IntColumn get count => integer()();
+
+  @override
+  Set<Column> get primaryKey => {sessionId, minute};
+}
+
+@DriftDatabase(
+  tables: [
+    StepIntervals,
+    KeyValues,
+    Workouts,
+    WorkoutPoints,
+    SleepSessions,
+    SleepMinutes,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   /// Opened lazily: the file is not touched until the first query, so
   /// constructing this costs nothing at launch.
@@ -85,7 +126,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -101,6 +142,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) {
         await m.createTable(workoutPoints);
         await m.createIndex(workoutPointsWorkout);
+      }
+      if (from < 4) {
+        await m.createTable(sleepSessions);
+        await m.createIndex(sleepSessionsStart);
+        await m.createTable(sleepMinutes);
       }
     },
     // Route points go with their workout.
@@ -183,6 +229,49 @@ class AppDatabase extends _$AppDatabase {
   /// The latest [limit] workouts, newest first.
   Stream<List<Workout>> watchRecentWorkouts(int limit) =>
       (select(workouts)
+            ..orderBy([(t) => OrderingTerm.desc(t.startMs)])
+            ..limit(limit))
+          .watch();
+
+  // ── Sleep ──────────────────────────────────────────────────────────────────
+
+  Future<int> insertSleepSession(SleepSessionsCompanion session) =>
+      into(sleepSessions).insert(session);
+
+  Future<void> updateSleepSession(int id, SleepSessionsCompanion changes) =>
+      (update(sleepSessions)..where((t) => t.id.equals(id))).write(changes);
+
+  Future<void> deleteSleepSession(int id) =>
+      (delete(sleepSessions)..where((t) => t.id.equals(id))).go();
+
+  /// Records a minute, or replaces it if it was already recorded.
+  Future<void> putSleepMinute(int sessionId, int minute, int count) =>
+      into(sleepMinutes).insertOnConflictUpdate(
+        SleepMinutesCompanion.insert(
+          sessionId: sessionId,
+          minute: minute,
+          count: count,
+        ),
+      );
+
+  Future<List<SleepMinute>> sleepMinutesOf(int sessionId) =>
+      (select(sleepMinutes)
+            ..where((t) => t.sessionId.equals(sessionId))
+            ..orderBy([(t) => OrderingTerm.asc(t.minute)]))
+          .get();
+
+  /// The night being tracked, if any.
+  Future<SleepSession?> openSleepSession() =>
+      (select(sleepSessions)
+            ..where((t) => t.endMs.isNull())
+            ..orderBy([(t) => OrderingTerm.desc(t.startMs)])
+            ..limit(1))
+          .getSingleOrNull();
+
+  /// Finished nights, newest first.
+  Stream<List<SleepSession>> watchSleepSessions(int limit) =>
+      (select(sleepSessions)
+            ..where((t) => t.endMs.isNotNull())
             ..orderBy([(t) => OrderingTerm.desc(t.startMs)])
             ..limit(limit))
           .watch();

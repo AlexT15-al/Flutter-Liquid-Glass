@@ -4,6 +4,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/goals/presentation/goals_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
+import '../../features/sleep/presentation/sleep_tab.dart';
 import '../../features/today/presentation/edit_today_sheet.dart';
 import '../../features/today/presentation/today_tab.dart';
 import '../../features/workout/presentation/workout_tab.dart';
@@ -124,12 +125,7 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
     return switch (tab) {
       HaloTab.today => TodayTab(titleController: title),
       HaloTab.workout => WorkoutTab(titleController: title),
-      HaloTab.sleep => TabPlaceholder(
-        titleController: title,
-        icon: tab.glyph,
-        title: tab.title,
-        message: 'Last night, your schedule and smart alarm.',
-      ),
+      HaloTab.sleep => SleepTab(titleController: title),
       HaloTab.health => TabPlaceholder(
         titleController: title,
         icon: tab.glyph,

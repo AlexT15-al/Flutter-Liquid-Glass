@@ -17,6 +17,8 @@ class GlassActionButton extends StatelessWidget {
     required this.onTap,
     this.icon,
     this.height = 56,
+    this.tint,
+    this.ink,
   });
 
   final String label;
@@ -24,16 +26,25 @@ class GlassActionButton extends StatelessWidget {
   final VoidCallback onTap;
   final double height;
 
+  /// The glass's colour; the accent unless a screen has its own, as Sleep
+  /// does.
+  final Color? tint;
+
+  /// The label's colour on [tint].
+  final Color? ink;
+
   @override
   Widget build(BuildContext context) {
-    final ink = HaloColors.onAccent.resolveFrom(context);
+    final ink = this.ink ?? HaloColors.onAccent.resolveFrom(context);
     return GlassButton.custom(
       onTap: onTap,
       label: label,
       width: double.infinity,
       height: height,
       shape: LiquidRoundedRectangle(borderRadius: height / 2),
-      settings: HaloGlass.tinted(HaloColors.accent.resolveFrom(context)),
+      settings: HaloGlass.tinted(
+        tint ?? HaloColors.accent.resolveFrom(context),
+      ),
       quality: HaloGlass.quality,
       // A sheet or a layer has no glass layer above it to share.
       useOwnLayer: true,

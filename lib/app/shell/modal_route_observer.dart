@@ -9,8 +9,9 @@ import 'package:flutter/widgets.dart';
 /// sheet cover the tab bar. The chrome reads [modalOnTop] and gets out of the
 /// way while one is up.
 ///
-/// A route counts as modal when it does not fill the screen opaquely: a page
-/// pushed in the stack is opaque, everything presented over a page is not.
+/// A route counts as modal when it does not fill the screen opaquely (a page
+/// pushed in the stack is opaque, everything presented over a page is not),
+/// or when it is a full-screen dialog, which stands in for the whole app.
 class ModalRouteObserver extends NavigatorObserver {
   final ValueNotifier<bool> modalOnTop = ValueNotifier(false);
 
@@ -18,7 +19,10 @@ class ModalRouteObserver extends NavigatorObserver {
 
   void _update() {
     final top = _stack.isEmpty ? null : _stack.last;
-    modalOnTop.value = top is ModalRoute && !top.opaque;
+    // A full-screen dialog (the bedside clock) covers the tab bar as well.
+    modalOnTop.value =
+        top is ModalRoute &&
+        (!top.opaque || (top is PageRoute && top.fullscreenDialog));
   }
 
   @override

@@ -30,13 +30,15 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result -> handle(call, result) }
         LiveActivityChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
+        SleepChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 
     /** A tap on the live workout notification: bring the workout up. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action == WorkoutNotification.ACTION_OPEN) {
-            LiveActivityChannel.send("open", null)
+        when (intent.action) {
+            WorkoutNotification.ACTION_OPEN -> LiveActivityChannel.send("open", null)
+            SleepService.ACTION_OPEN -> SleepChannel.open()
         }
     }
 

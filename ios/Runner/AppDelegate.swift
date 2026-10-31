@@ -1,10 +1,12 @@
 import ActivityKit
+import CoreMotion
 import Flutter
 import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let liveActivity = LiveActivityBridge()
+  private let sleep = SleepBridge()
 
   override func application(
     _ application: UIApplication,
@@ -17,6 +19,9 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloLiveActivity") {
       liveActivity.attach(to: registrar.messenger())
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloSleep") {
+      sleep.attach(to: registrar.messenger())
     }
   }
 }
@@ -124,5 +129,129 @@ final class LiveActivityBridge {
     guard let activity = activity as? Activity<WorkoutActivityAttributes> else { return }
     self.activity = nil
     Task { await activity.end(nil, dismissalPolicy: .immediate) }
+  }
+}
+
+// MARK: - Sleep
+
+/// `halo/sleep` and `halo/sleep/minutes` on iOS: the bed's movement, minute by
+/// minute, from the accelerometer.
+///
+/// iOS does not let an app read the accelerometer once it is in the
+/// background, so on iPhone the night is tracked while Halo stays open on the
+/// bedside, ideally on its charger. The counting matches Android's.
+final class SleepBridge: NSObject, FlutterStreamHandler {
+  private let motion = CMMotionManager()
+  private let queue = OperationQueue()
+  private var sink: FlutterEventSink?
+  private var pending: [[String: Int]] = []
+
+  private var start = Date()
+  private var minute = -1
+  private var movingSeconds = 0
+  private var lastSecond = -1
+  private var secondMoved = false
+  private var gravity: (Double, Double, Double)?
+
+  private static let threshold = 0.12 / 9.81  // in g, as CoreMotion reports
+  private static let alpha = 0.9
+
+  func attach(to messenger: FlutterBinaryMessenger) {
+    let methods = FlutterMethodChannel(name: "halo/sleep", binaryMessenger: messenger)
+    methods.setMethodCallHandler { [weak self] call, result in
+      guard let self else { return }
+      switch call.method {
+      case "start":
+        let args = call.arguments as? [String: Any]
+        let ms = (args?["startMs"] as? NSNumber)?.doubleValue
+        self.begin(at: ms.map { Date(timeIntervalSince1970: $0 / 1000) } ?? Date())
+        result(true)
+      case "stop":
+        self.end()
+        result(nil)
+      case "isRunning":
+        result(self.motion.isAccelerometerActive)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    FlutterEventChannel(name: "halo/sleep/minutes", binaryMessenger: messenger)
+      .setStreamHandler(self)
+  }
+
+  private func begin(at date: Date) {
+    guard motion.isAccelerometerAvailable, !motion.isAccelerometerActive else { return }
+    start = date
+    minute = -1
+    gravity = nil
+    queue.maxConcurrentOperationCount = 1
+    motion.accelerometerUpdateInterval = 0.1
+    UIApplication.shared.isIdleTimerDisabled = true
+    motion.startAccelerometerUpdates(to: queue) { [weak self] data, _ in
+      guard let self, let a = data?.acceleration else { return }
+      self.sample(a.x, a.y, a.z)
+    }
+  }
+
+  private func end() {
+    motion.stopAccelerometerUpdates()
+    UIApplication.shared.isIdleTimerDisabled = false
+    // On the sensor queue, after any sample still in flight.
+    queue.addOperation { [weak self] in
+      guard let self else { return }
+      if self.minute >= 0 {
+        self.emit(self.minute, self.movingSeconds + (self.secondMoved ? 1 : 0))
+      }
+      self.minute = -1
+    }
+  }
+
+  private func sample(_ x: Double, _ y: Double, _ z: Double) {
+    guard let g = gravity else {
+      gravity = (x, y, z)
+      return
+    }
+    let a = Self.alpha
+    let next = (a * g.0 + (1 - a) * x, a * g.1 + (1 - a) * y, a * g.2 + (1 - a) * z)
+    gravity = next
+    let lx = x - next.0, ly = y - next.1, lz = z - next.2
+    let moved = (lx * lx + ly * ly + lz * lz).squareRoot() > Self.threshold
+
+    let elapsed = Date().timeIntervalSince(start)
+    let second = Int(elapsed)
+    if second != lastSecond {
+      if secondMoved { movingSeconds += 1 }
+      secondMoved = false
+      lastSecond = second
+    }
+    if moved { secondMoved = true }
+
+    let m = Int(elapsed / 60)
+    if m != minute {
+      if minute >= 0 { emit(minute, movingSeconds) }
+      minute = m
+      movingSeconds = 0
+    }
+  }
+
+  private func emit(_ minute: Int, _ count: Int) {
+    let event = ["minute": minute, "count": count]
+    DispatchQueue.main.async {
+      if let sink = self.sink { sink(event) } else { self.pending.append(event) }
+    }
+  }
+
+  func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink)
+    -> FlutterError?
+  {
+    sink = events
+    pending.forEach { events($0) }
+    pending.removeAll()
+    return nil
+  }
+
+  func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    sink = nil
+    return nil
   }
 }

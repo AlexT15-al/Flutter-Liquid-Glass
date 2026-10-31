@@ -46,6 +46,10 @@
             android:name=".WorkoutService"
             android:exported="false"
             android:foregroundServiceType="location|health" />
+        <service
+            android:name=".SleepService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
         <receiver
             android:name=".WorkoutActionReceiver"
             android:exported="false" />

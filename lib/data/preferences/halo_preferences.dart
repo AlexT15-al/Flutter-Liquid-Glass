@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../domain/activity_goals.dart';
 import '../../domain/app_theme_mode.dart';
 import '../../domain/body_profile.dart';
+import '../../domain/sleep.dart';
 import '../../features/today/domain/today_card.dart';
 import '../database/app_database.dart';
 
@@ -23,6 +24,7 @@ class HaloPreferences {
   static const _themeModeKey = 'theme_mode';
   static const _hapticsKey = 'haptics';
   static const _liveActivityKey = 'live_activity';
+  static const _sleepScheduleKey = 'sleep_schedule';
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
@@ -58,6 +60,26 @@ class HaloPreferences {
 
   Future<bool> _readFlag(String key) async =>
       await _db.readValue(key) != 'false';
+
+  // ── Sleep ──────────────────────────────────────────────────────────────────
+
+  Stream<SleepSchedule> watchSleepSchedule() =>
+      _db.watchValue(_sleepScheduleKey).map(_decodeSchedule);
+
+  Future<SleepSchedule> readSleepSchedule() async =>
+      _decodeSchedule(await _db.readValue(_sleepScheduleKey));
+
+  Future<void> setSleepSchedule(SleepSchedule schedule) =>
+      _db.writeValue(_sleepScheduleKey, jsonEncode(schedule.toJson()));
+
+  static SleepSchedule _decodeSchedule(String? raw) {
+    if (raw == null) return const SleepSchedule();
+    try {
+      return SleepSchedule.fromJson(jsonDecode(raw) as Map<String, Object?>);
+    } on Object {
+      return const SleepSchedule();
+    }
+  }
 
   // ── Profile ────────────────────────────────────────────────────────────────
 

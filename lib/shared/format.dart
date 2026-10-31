@@ -61,6 +61,18 @@ abstract final class Format {
     return '$minutes:$ss';
   }
 
+  /// A time of day on the 24-hour clock: `07:05`, `23:41`.
+  static String timeOfDay(DateTime time) =>
+      '${time.hour.toString().padLeft(2, '0')}:'
+      '${time.minute.toString().padLeft(2, '0')}';
+
+  /// Minutes after midnight as a time of day: `23:30`.
+  static String minutesOfDay(int minutes) {
+    final m = minutes % (24 * 60);
+    return '${(m ~/ 60).toString().padLeft(2, '0')}:'
+        '${(m % 60).toString().padLeft(2, '0')}';
+  }
+
   /// A pace per kilometre: `5'42"`.
   static String pace(Duration perKm) {
     final minutes = perKm.inMinutes;

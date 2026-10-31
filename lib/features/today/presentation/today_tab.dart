@@ -7,11 +7,15 @@ import '../../../app/theme/halo_metrics.dart';
 import '../../../data/activity/activity_store.dart';
 import '../../../data/activity/step_tracker.dart';
 import '../../../domain/activity_summary.dart';
+import '../../../domain/sleep.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/hourly_bars.dart';
 import '../../../shared/widgets/large_title.dart';
 import '../../../shared/widgets/placeholder_page.dart';
 import '../../activity/presentation/activity_page.dart';
+import '../../sleep/presentation/night_page.dart';
+import '../../sleep/presentation/widgets/hypnogram.dart';
+import '../../sleep/sleep_controller.dart';
 import '../domain/today_card.dart';
 import 'widgets/activity_card.dart';
 import 'widgets/metric_tile.dart';
@@ -216,6 +220,7 @@ class _TodayTabState extends State<TodayTab> {
         ),
         onTap: open,
       ),
+      TodayCard.sleep => _SleepTile(card: card, color: color),
       _ => MetricTile(
         title: card.title,
         icon: card.icon,
@@ -223,6 +228,66 @@ class _TodayTabState extends State<TodayTab> {
         onTap: open,
       ),
     };
+  }
+}
+
+/// Last night, from the Sleep tab: how long, and its shape.
+class _SleepTile extends StatefulWidget {
+  const _SleepTile({required this.card, required this.color});
+
+  final TodayCard card;
+  final Color color;
+
+  @override
+  State<_SleepTile> createState() => _SleepTileState();
+}
+
+class _SleepTileState extends State<_SleepTile> {
+  Stream<List<SleepNight>>? _nights;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _nights ??= SleepScope.read(context).repository.watchNights(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<SleepNight>>(
+      stream: _nights,
+      initialData: const [],
+      builder: (context, snapshot) {
+        final nights = snapshot.data ?? const [];
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        // Only a night that ended this morning or yesterday's is "last".
+        final night =
+            nights.isNotEmpty &&
+                today.difference(nights.first.morning).inDays <= 1
+            ? nights.first
+            : null;
+        final asleep = night?.asleep;
+        return MetricTile(
+          title: widget.card.title,
+          icon: widget.card.icon,
+          color: widget.color,
+          caption: night == null ? null : nightTitle(night),
+          value: asleep == null || asleep.inMinutes == 0
+              ? null
+              : '${asleep.inHours}:'
+                    '${(asleep.inMinutes % 60).toString().padLeft(2, '0')}',
+          unit: 'hr',
+          chart: night == null || !night.hasStages
+              ? null
+              : Hypnogram(night: night, height: 34, axis: false, labels: false),
+          onTap: () => Navigator.of(context).push(
+            night == null
+                ? PlaceholderPage.route(widget.card.title)
+                : NightPage.route(night),
+          ),
+        );
+      },
+    );
   }
 }
 

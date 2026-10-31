@@ -10,7 +10,9 @@ import 'package:halo/data/activity/step_tracker.dart';
 import 'package:halo/data/database/app_database.dart';
 import 'package:halo/data/location/location_tracker.dart';
 import 'package:halo/data/preferences/halo_preferences.dart';
+import 'package:halo/data/sleep/sleep_repository.dart';
 import 'package:halo/data/workouts/workout_repository.dart';
+import 'package:halo/features/sleep/sleep_controller.dart';
 import 'package:halo/features/workout/live/workout_controller.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -23,6 +25,7 @@ class Harness {
     this.steps,
     this.workouts,
     this.workoutController,
+    this.sleep,
   );
 
   final AppDatabase db;
@@ -31,6 +34,7 @@ class Harness {
   final StepTracker steps;
   final WorkoutRepository workouts;
   final WorkoutController workoutController;
+  final SleepController sleep;
 
   /// Builds the services. Database work runs in [WidgetTester.runAsync]:
   /// queries started inside the fake-async zone never complete.
@@ -50,6 +54,14 @@ class Harness {
     );
     messenger.setMockMethodCallHandler(
       const MethodChannel('halo/live_activity'),
+      (call) async => null,
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('halo/sleep'),
+      (call) async => call.method == 'stop' ? null : false,
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('halo/sleep/minutes'),
       (call) async => null,
     );
     final db = AppDatabase.forExecutor(
@@ -85,6 +97,7 @@ class Harness {
       steps,
       workouts,
       controller,
+      SleepController(repository: SleepRepository(db), clock: clock),
     );
     await tester.runAsync(() async {
       await activity.load();
@@ -104,7 +117,7 @@ class Harness {
       theme: const GlassThemeData.ios27(),
       child: WorkoutScope(
         controller: workoutController,
-        child: const HaloApp(),
+        child: SleepScope(controller: sleep, child: const HaloApp()),
       ),
     ),
   );

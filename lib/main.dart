@@ -12,7 +12,9 @@ import 'data/activity/step_tracker.dart';
 import 'data/database/app_database.dart';
 import 'data/location/location_tracker.dart';
 import 'data/preferences/halo_preferences.dart';
+import 'data/sleep/sleep_repository.dart';
 import 'data/workouts/workout_repository.dart';
+import 'features/sleep/sleep_controller.dart';
 import 'features/workout/live/workout_controller.dart';
 import 'features/workout/live/workout_live_activity.dart';
 import 'platform/haptics.dart';
@@ -42,6 +44,9 @@ Future<void> main() async {
   );
   final steps = StepTracker(preferences: preferences, onSpan: activity.addSpan);
   activity.attach(steps);
+  final sleepController = SleepController(
+    repository: SleepRepository(database),
+  );
   final workoutController = WorkoutController(
     repository: workouts,
     stepCounter: steps.latestCount,
@@ -60,6 +65,10 @@ Future<void> main() async {
     controller: workoutController,
     enabled: preferences.watchLiveActivity(),
   ).attach();
+
+  // A night left open (the app was closed while it tracked) is picked up or
+  // closed. Not awaited: it is not on the first frame's path.
+  unawaited(sleepController.restore());
 
   // Not awaited: checking access and opening the sensor must not hold the
   // first frame. It never prompts; asking is a button on Today.
@@ -86,7 +95,10 @@ Future<void> main() async {
         // outlives every route.
         child: WorkoutScope(
           controller: workoutController,
-          child: HaloApp(initialThemeMode: themeMode),
+          child: SleepScope(
+            controller: sleepController,
+            child: HaloApp(initialThemeMode: themeMode),
+          ),
         ),
       ),
     ),
