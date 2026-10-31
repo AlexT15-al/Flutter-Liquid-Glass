@@ -8,9 +8,12 @@ import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../app/theme/halo_motion.dart';
 import '../../../domain/activity_goals.dart';
+import '../../../domain/nutrition.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
+import '../../nutrition/presentation/weight_sheets.dart';
 
 /// Change Goals: the four daily targets, each with − and + around a large
 /// number, the way Fitness changes the Move goal.
@@ -104,6 +107,9 @@ class _GoalsPageState extends State<GoalsPage> {
                 max: 50000,
                 onChanged: (v) => save(goals.copyWith(steps: v)),
               ),
+              const SizedBox(height: HaloMetrics.sectionTopGap),
+              const GroupCaption('Body'),
+              const _WeightGoalCard(),
             ],
           );
         },
@@ -307,6 +313,44 @@ class _StepButtonState extends State<_StepButton> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The target weight beside the daily goals: Nutrition and Plans work
+/// towards it.
+class _WeightGoalCard extends StatelessWidget {
+  const _WeightGoalCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final preferences = HaloScope.preferencesOf(context);
+    final activity = HaloScope.activityOf(context);
+    return StreamBuilder<WeightGoal>(
+      stream: preferences.watchWeightGoal(),
+      initialData: const WeightGoal(),
+      builder: (context, snapshot) {
+        final goal = snapshot.data ?? const WeightGoal();
+        final target = goal.targetKg;
+        void open() => showWeightGoalSheet(context, activity.profile, goal);
+        return GroupedCard(
+          children: [
+            GroupedRow(
+              title: 'Target Weight',
+              value: target == null
+                  ? 'Not Set'
+                  : '${Format.decimal(target)} kg',
+              onTap: open,
+            ),
+            GroupedRow(
+              title: 'Pace',
+              value:
+                  '${goal.pace.title} · ${Format.decimal(goal.pace.kgPerWeek)} kg a week',
+              onTap: open,
+            ),
+          ],
+        );
+      },
     );
   }
 }

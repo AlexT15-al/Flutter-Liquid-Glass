@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../features/goals/presentation/goals_page.dart';
+import '../../features/nutrition/presentation/nutrition_tab.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/today/presentation/edit_today_sheet.dart';
@@ -104,12 +105,7 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
     return switch (tab) {
       HaloTab.today => TodayTab(titleController: title),
       HaloTab.workout => WorkoutTab(titleController: title),
-      HaloTab.nutrition => TabPlaceholder(
-        titleController: title,
-        icon: tab.glyph,
-        title: tab.title,
-        message: 'Meals, calories, water and your target weight.',
-      ),
+      HaloTab.nutrition => NutritionTab(titleController: title),
       HaloTab.plans => TabPlaceholder(
         titleController: title,
         icon: tab.glyph,

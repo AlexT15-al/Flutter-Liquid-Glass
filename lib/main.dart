@@ -11,6 +11,7 @@ import 'data/activity/activity_store.dart';
 import 'data/activity/step_tracker.dart';
 import 'data/database/app_database.dart';
 import 'data/location/location_tracker.dart';
+import 'data/nutrition/nutrition_repository.dart';
 import 'data/preferences/halo_preferences.dart';
 import 'data/sleep/sleep_repository.dart';
 import 'data/workouts/workout_repository.dart';
@@ -86,6 +87,7 @@ Future<void> main() async {
       activity: activity,
       steps: steps,
       workouts: workouts,
+      nutrition: NutritionRepository(database),
       child: LiquidGlassWidgets.wrap(
         // The iOS 27 material, premium in both appearances. Brightness is
         // resolved at each glass widget's own context, so the variants follow

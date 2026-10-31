@@ -61,6 +61,14 @@ abstract final class Format {
     return '$minutes:$ss';
   }
 
+  /// Millilitres as litres, to the glass: `1.25`, `2`, `0.5`.
+  static String litres(int ml) {
+    final l = ml / 1000;
+    if (ml % 1000 == 0) return '${l.round()}';
+    if (ml % 100 == 0) return l.toStringAsFixed(1);
+    return l.toStringAsFixed(2);
+  }
+
   /// A time of day on the 24-hour clock: `07:05`, `23:41`.
   static String timeOfDay(DateTime time) =>
       '${time.hour.toString().padLeft(2, '0')}:'

@@ -9,6 +9,7 @@ import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
+import '../../../shared/widgets/progress_bar.dart';
 import '../sleep_controller.dart';
 import 'widgets/hypnogram.dart';
 import 'widgets/score_ring.dart';
@@ -429,23 +430,7 @@ class _Part extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          ClipRSuperellipse(
-            borderRadius: BorderRadius.circular(3),
-            child: SizedBox(
-              height: 6,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ColoredBox(color: HaloColors.ringTrack(color)),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: value.clamp(0.0, 1.0),
-                    child: ColoredBox(color: color),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ProgressBar(value: value.clamp(0.0, 1.0), color: color),
         ],
       ),
     );

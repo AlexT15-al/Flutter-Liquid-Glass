@@ -107,6 +107,40 @@ class SleepMinutes extends Table {
   Set<Column> get primaryKey => {sessionId, minute};
 }
 
+/// Something eaten. Calories and macros are optional: a meal can be logged
+/// by name alone.
+@DataClassName('FoodRow')
+@TableIndex(name: 'food_entries_time', columns: {#timeMs})
+class FoodEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get timeMs => integer()();
+
+  /// `Meal.name`.
+  TextColumn get meal => text()();
+  TextColumn get name => text()();
+  RealColumn get kcal => real().nullable()();
+  RealColumn get protein => real().nullable()();
+  RealColumn get carbs => real().nullable()();
+  RealColumn get fat => real().nullable()();
+  RealColumn get portions => real().withDefault(const Constant(1.0))();
+}
+
+/// A glass (or any amount) of water.
+@TableIndex(name: 'water_entries_time', columns: {#timeMs})
+class WaterEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get timeMs => integer()();
+  IntColumn get ml => integer()();
+}
+
+/// A weigh-in.
+@TableIndex(name: 'weight_entries_time', columns: {#timeMs})
+class WeightEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get timeMs => integer()();
+  RealColumn get kg => real()();
+}
+
 @DriftDatabase(
   tables: [
     StepIntervals,
@@ -115,6 +149,9 @@ class SleepMinutes extends Table {
     WorkoutPoints,
     SleepSessions,
     SleepMinutes,
+    FoodEntries,
+    WaterEntries,
+    WeightEntries,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -126,7 +163,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -147,6 +184,14 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(sleepSessions);
         await m.createIndex(sleepSessionsStart);
         await m.createTable(sleepMinutes);
+      }
+      if (from < 5) {
+        await m.createTable(foodEntries);
+        await m.createIndex(foodEntriesTime);
+        await m.createTable(waterEntries);
+        await m.createIndex(waterEntriesTime);
+        await m.createTable(weightEntries);
+        await m.createIndex(weightEntriesTime);
       }
     },
     // Route points go with their workout.
@@ -288,6 +333,65 @@ class AppDatabase extends _$AppDatabase {
       (select(sleepSessions)
             ..where((t) => t.endMs.isNotNull())
             ..orderBy([(t) => OrderingTerm.desc(t.startMs)])
+            ..limit(limit))
+          .watch();
+
+  // ── Nutrition ──────────────────────────────────────────────────────────────
+
+  Future<int> insertFood(FoodEntriesCompanion entry) =>
+      into(foodEntries).insert(entry);
+
+  Future<void> updateFood(int id, FoodEntriesCompanion entry) =>
+      (update(foodEntries)..where((t) => t.id.equals(id))).write(entry);
+
+  Future<void> deleteFood(int id) =>
+      (delete(foodEntries)..where((t) => t.id.equals(id))).go();
+
+  Stream<List<FoodRow>> watchFoodBetween(DateTime from, DateTime to) =>
+      (select(foodEntries)
+            ..where(
+              (t) =>
+                  t.timeMs.isBiggerOrEqualValue(from.millisecondsSinceEpoch) &
+                  t.timeMs.isSmallerThanValue(to.millisecondsSinceEpoch),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.timeMs)]))
+          .watch();
+
+  /// The latest foods logged, newest first, for quick re-adding.
+  Future<List<FoodRow>> recentFoods(int limit) =>
+      (select(foodEntries)
+            ..orderBy([(t) => OrderingTerm.desc(t.timeMs)])
+            ..limit(limit))
+          .get();
+
+  Future<int> insertWater(DateTime time, int ml) => into(waterEntries).insert(
+    WaterEntriesCompanion.insert(timeMs: time.millisecondsSinceEpoch, ml: ml),
+  );
+
+  Future<void> deleteWater(int id) =>
+      (delete(waterEntries)..where((t) => t.id.equals(id))).go();
+
+  Stream<List<WaterEntry>> watchWaterBetween(DateTime from, DateTime to) =>
+      (select(waterEntries)
+            ..where(
+              (t) =>
+                  t.timeMs.isBiggerOrEqualValue(from.millisecondsSinceEpoch) &
+                  t.timeMs.isSmallerThanValue(to.millisecondsSinceEpoch),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.timeMs)]))
+          .watch();
+
+  Future<int> insertWeight(DateTime time, double kg) =>
+      into(weightEntries).insert(
+        WeightEntriesCompanion.insert(
+          timeMs: time.millisecondsSinceEpoch,
+          kg: kg,
+        ),
+      );
+
+  Stream<List<WeightEntry>> watchWeights(int limit) =>
+      (select(weightEntries)
+            ..orderBy([(t) => OrderingTerm.desc(t.timeMs)])
             ..limit(limit))
           .watch();
 

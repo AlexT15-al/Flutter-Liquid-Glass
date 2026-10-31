@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../data/activity/activity_store.dart';
 import '../data/activity/step_tracker.dart';
 import '../data/database/app_database.dart';
+import '../data/nutrition/nutrition_repository.dart';
 import '../data/preferences/halo_preferences.dart';
 import '../data/workouts/workout_repository.dart';
 
@@ -23,6 +24,7 @@ class HaloScope extends InheritedWidget {
     required this.activity,
     required this.steps,
     required this.workouts,
+    required this.nutrition,
     required super.child,
   });
 
@@ -31,6 +33,7 @@ class HaloScope extends InheritedWidget {
   final ActivityStore activity;
   final StepTracker steps;
   final WorkoutRepository workouts;
+  final NutritionRepository nutrition;
 
   static HaloScope _of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<HaloScope>();
@@ -49,11 +52,15 @@ class HaloScope extends InheritedWidget {
   static WorkoutRepository workoutsOf(BuildContext context) =>
       _of(context).workouts;
 
+  static NutritionRepository nutritionOf(BuildContext context) =>
+      _of(context).nutrition;
+
   @override
   bool updateShouldNotify(HaloScope oldWidget) =>
       database != oldWidget.database ||
       preferences != oldWidget.preferences ||
       activity != oldWidget.activity ||
       steps != oldWidget.steps ||
-      workouts != oldWidget.workouts;
+      workouts != oldWidget.workouts ||
+      nutrition != oldWidget.nutrition;
 }

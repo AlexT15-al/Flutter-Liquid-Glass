@@ -2,11 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../app/halo_scope.dart';
+import '../../../app/shell/halo_tab.dart';
+import '../../../app/shell/halo_tab_controller.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../data/activity/activity_store.dart';
 import '../../../data/activity/step_tracker.dart';
 import '../../../domain/activity_summary.dart';
+import '../../../domain/nutrition.dart';
 import '../../../domain/sleep.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/hourly_bars.dart';
@@ -222,6 +225,9 @@ class _TodayTabState extends State<TodayTab> {
         onTap: open,
       ),
       TodayCard.sleep => _SleepTile(card: card, color: color),
+      TodayCard.water ||
+      TodayCard.nutrition ||
+      TodayCard.weight => _NutritionTile(card: card, color: color),
       _ => MetricTile(
         title: card.title,
         icon: card.icon,
@@ -318,5 +324,82 @@ class _DateLabel extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Water, calories eaten or weight, from Nutrition; a tap goes there.
+class _NutritionTile extends StatefulWidget {
+  const _NutritionTile({required this.card, required this.color});
+
+  final TodayCard card;
+  final Color color;
+
+  @override
+  State<_NutritionTile> createState() => _NutritionTileState();
+}
+
+class _NutritionTileState extends State<_NutritionTile> {
+  Stream<List<FoodEntry>>? _food;
+  Stream<List<(int, int)>>? _water;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nutrition = HaloScope.nutritionOf(context);
+    final now = DateTime.now();
+    _food ??= nutrition.watchFoodOn(now);
+    _water ??= nutrition.watchWaterOn(now);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final card = widget.card;
+    void open() => HaloTabScope.read(context).tab = HaloTab.nutrition;
+    MetricTile tile({String? value, String? unit, String? caption}) =>
+        MetricTile(
+          title: card.title,
+          icon: card.icon,
+          color: widget.color,
+          caption: caption,
+          value: value,
+          unit: unit,
+          onTap: open,
+        );
+
+    return switch (card) {
+      TodayCard.water => StreamBuilder<List<(int, int)>>(
+        stream: _water,
+        initialData: const [],
+        builder: (context, snapshot) {
+          final ml = (snapshot.data ?? const []).fold<int>(
+            0,
+            (t, w) => t + w.$2,
+          );
+          return tile(
+            caption: 'Today',
+            value: ml == 0 ? null : Format.litres(ml),
+            unit: 'L',
+          );
+        },
+      ),
+      TodayCard.nutrition => StreamBuilder<List<FoodEntry>>(
+        stream: _food,
+        initialData: const [],
+        builder: (context, snapshot) {
+          final food = snapshot.data ?? const [];
+          final kcal = food.fold<double>(0, (t, e) => t + (e.kcal ?? 0));
+          return tile(
+            caption: 'Eaten Today',
+            value: food.isEmpty ? null : Format.integer(kcal),
+            unit: 'kcal',
+          );
+        },
+      ),
+      _ => tile(
+        caption: 'Current',
+        value: Format.decimal(HaloScope.activityOf(context).profile.weightKg),
+        unit: 'kg',
+      ),
+    };
   }
 }

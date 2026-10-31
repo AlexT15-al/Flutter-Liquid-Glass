@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../domain/activity_goals.dart';
 import '../../domain/app_theme_mode.dart';
 import '../../domain/body_profile.dart';
+import '../../domain/nutrition.dart';
 import '../../domain/sleep.dart';
 import '../../features/today/domain/today_card.dart';
 import '../database/app_database.dart';
@@ -26,6 +27,7 @@ class HaloPreferences {
   static const _liveActivityKey = 'live_activity';
   static const _sleepScheduleKey = 'sleep_schedule';
   static const _sleepDismissedKey = 'sleep_dismissed';
+  static const _weightGoalKey = 'weight_goal';
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
@@ -89,6 +91,23 @@ class HaloPreferences {
       return SleepSchedule.fromJson(jsonDecode(raw) as Map<String, Object?>);
     } on Object {
       return const SleepSchedule();
+    }
+  }
+
+  // ── Weight goal ────────────────────────────────────────────────────────────
+
+  Stream<WeightGoal> watchWeightGoal() =>
+      _db.watchValue(_weightGoalKey).map(_decodeWeightGoal);
+
+  Future<void> setWeightGoal(WeightGoal goal) =>
+      _db.writeValue(_weightGoalKey, jsonEncode(goal.toJson()));
+
+  static WeightGoal _decodeWeightGoal(String? raw) {
+    if (raw == null) return const WeightGoal();
+    try {
+      return WeightGoal.fromJson(jsonDecode(raw) as Map<String, Object?>);
+    } on Object {
+      return const WeightGoal();
     }
   }
 
