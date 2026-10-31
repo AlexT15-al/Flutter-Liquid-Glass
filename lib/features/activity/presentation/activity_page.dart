@@ -9,8 +9,11 @@ import '../../../domain/activity_goals.dart';
 import '../../../domain/activity_summary.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/activity_rings.dart';
+import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
+import 'history_page.dart';
+import 'trends_page.dart';
 import 'widgets/hourly_chart.dart';
 import 'widgets/week_strip.dart';
 
@@ -119,6 +122,20 @@ class _ActivityPageState extends State<ActivityPage> {
                   goals: goals,
                   upToHour: upToHour,
                 ),
+              ),
+              const SizedBox(height: HaloMetrics.sectionTopGap),
+              GroupedCard(
+                children: [
+                  GroupedRow(
+                    title: 'History',
+                    onTap: () =>
+                        Navigator.of(context).push(HistoryPage.route()),
+                  ),
+                  GroupedRow(
+                    title: 'Trends',
+                    onTap: () => Navigator.of(context).push(TrendsPage.route()),
+                  ),
+                ],
               ),
             ],
           ),
