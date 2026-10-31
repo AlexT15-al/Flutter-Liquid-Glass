@@ -9,13 +9,14 @@ import '../../../app/theme/halo_metrics.dart';
 import '../../../data/activity/activity_store.dart';
 import '../../../data/activity/step_tracker.dart';
 import '../../../domain/activity_summary.dart';
+import '../../../domain/mindfulness.dart';
 import '../../../domain/nutrition.dart';
 import '../../../domain/sleep.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/hourly_bars.dart';
 import '../../../shared/widgets/large_title.dart';
-import '../../../shared/widgets/placeholder_page.dart';
 import '../../activity/presentation/activity_page.dart';
+import '../../mindfulness/mindfulness_page.dart';
 import '../../nutrition/presentation/water_page.dart';
 import '../../sleep/presentation/night_page.dart';
 import '../../sleep/presentation/sleep_page.dart';
@@ -53,9 +54,6 @@ class _TodayTabState extends State<TodayTab> {
     super.didChangeDependencies();
     _cards ??= HaloScope.preferencesOf(context).watchTodayCards();
   }
-
-  void _open(String title) =>
-      Navigator.of(context).push(PlaceholderPage.route(title));
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +186,6 @@ class _TodayTabState extends State<TodayTab> {
     DateTime now,
   ) {
     final color = card.color.resolveFrom(context);
-    void open() => _open(card.title);
 
     // Steps only mean something once the counter is running. Before that a
     // zero would read as "you have not moved", which nobody measured.
@@ -230,12 +227,7 @@ class _TodayTabState extends State<TodayTab> {
       TodayCard.water ||
       TodayCard.nutrition ||
       TodayCard.weight => _NutritionTile(card: card, color: color),
-      _ => MetricTile(
-        title: card.title,
-        icon: card.icon,
-        color: color,
-        onTap: open,
-      ),
+      TodayCard.mindfulness => _MindfulTile(card: card, color: color),
     };
   }
 }
@@ -408,5 +400,52 @@ class _NutritionTileState extends State<_NutritionTile> {
         unit: 'kg',
       ),
     };
+  }
+}
+
+/// Today's mindful minutes, or the mood logged; a tap opens Mindfulness.
+class _MindfulTile extends StatefulWidget {
+  const _MindfulTile({required this.card, required this.color});
+
+  final TodayCard card;
+  final Color color;
+
+  @override
+  State<_MindfulTile> createState() => _MindfulTileState();
+}
+
+class _MindfulTileState extends State<_MindfulTile> {
+  Stream<List<MindfulSession>>? _sessions;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final now = DateTime.now();
+    _sessions ??= HaloScope.mindfulnessOf(
+      context,
+    ).watchSessionsSince(DateTime(now.year, now.month, now.day));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<MindfulSession>>(
+      stream: _sessions,
+      initialData: const [],
+      builder: (context, snapshot) {
+        final minutes = (snapshot.data ?? const []).fold<int>(
+          0,
+          (t, s) => t + (s.length.inSeconds / 60).round(),
+        );
+        return MetricTile(
+          title: widget.card.title,
+          icon: widget.card.icon,
+          color: widget.color,
+          caption: 'Today',
+          value: minutes == 0 ? null : '$minutes',
+          unit: 'min',
+          onTap: () => Navigator.of(context).push(MindfulnessPage.route()),
+        );
+      },
+    );
   }
 }

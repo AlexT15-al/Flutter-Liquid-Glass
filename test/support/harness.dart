@@ -9,6 +9,7 @@ import 'package:halo/data/activity/activity_store.dart';
 import 'package:halo/data/activity/step_tracker.dart';
 import 'package:halo/data/database/app_database.dart';
 import 'package:halo/data/location/location_tracker.dart';
+import 'package:halo/data/mindfulness/mindfulness_repository.dart';
 import 'package:halo/data/nutrition/nutrition_repository.dart';
 import 'package:halo/data/preferences/halo_preferences.dart';
 import 'package:halo/data/sleep/sleep_repository.dart';
@@ -40,6 +41,7 @@ class Harness {
 
   late final NutritionRepository nutrition = NutritionRepository(db);
   late final TrainingRepository training = TrainingRepository(db);
+  late final MindfulnessRepository mindfulness = MindfulnessRepository(db);
 
   /// Builds the services. Database work runs in [WidgetTester.runAsync]:
   /// queries started inside the fake-async zone never complete.
@@ -132,6 +134,7 @@ class Harness {
     workouts: workouts,
     nutrition: nutrition,
     training: training,
+    mindfulness: mindfulness,
     child: LiquidGlassWidgets.wrap(
       theme: const GlassThemeData.ios27(),
       child: WorkoutScope(

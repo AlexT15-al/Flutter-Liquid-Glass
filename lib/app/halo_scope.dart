@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../data/activity/activity_store.dart';
 import '../data/activity/step_tracker.dart';
 import '../data/database/app_database.dart';
+import '../data/mindfulness/mindfulness_repository.dart';
 import '../data/nutrition/nutrition_repository.dart';
 import '../data/preferences/halo_preferences.dart';
 import '../data/training/training_repository.dart';
@@ -27,6 +28,7 @@ class HaloScope extends InheritedWidget {
     required this.workouts,
     required this.nutrition,
     required this.training,
+    required this.mindfulness,
     required super.child,
   });
 
@@ -37,6 +39,7 @@ class HaloScope extends InheritedWidget {
   final WorkoutRepository workouts;
   final NutritionRepository nutrition;
   final TrainingRepository training;
+  final MindfulnessRepository mindfulness;
 
   static HaloScope _of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<HaloScope>();
@@ -63,6 +66,9 @@ class HaloScope extends InheritedWidget {
   static TrainingRepository trainingOf(BuildContext context) =>
       _of(context).training;
 
+  static MindfulnessRepository mindfulnessOf(BuildContext context) =>
+      _of(context).mindfulness;
+
   @override
   bool updateShouldNotify(HaloScope oldWidget) =>
       database != oldWidget.database ||
@@ -71,5 +77,6 @@ class HaloScope extends InheritedWidget {
       steps != oldWidget.steps ||
       workouts != oldWidget.workouts ||
       nutrition != oldWidget.nutrition ||
-      training != oldWidget.training;
+      training != oldWidget.training ||
+      mindfulness != oldWidget.mindfulness;
 }

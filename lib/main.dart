@@ -12,6 +12,7 @@ import 'data/activity/step_tracker.dart';
 import 'data/activity/widget_sync.dart';
 import 'data/database/app_database.dart';
 import 'data/location/location_tracker.dart';
+import 'data/mindfulness/mindfulness_repository.dart';
 import 'data/nutrition/nutrition_repository.dart';
 import 'data/preferences/halo_preferences.dart';
 import 'data/sleep/sleep_repository.dart';
@@ -94,6 +95,7 @@ Future<void> main() async {
       workouts: workouts,
       nutrition: NutritionRepository(database),
       training: TrainingRepository(database),
+      mindfulness: MindfulnessRepository(database),
       child: LiquidGlassWidgets.wrap(
         // The iOS 27 material, premium in both appearances. Brightness is
         // resolved at each glass widget's own context, so the variants follow

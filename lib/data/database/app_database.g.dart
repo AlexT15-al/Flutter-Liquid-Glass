@@ -3530,6 +3530,652 @@ class ExerciseSetsCompanion extends UpdateCompanion<ExerciseSet> {
   }
 }
 
+class $MindfulSessionsTable extends MindfulSessions
+    with TableInfo<$MindfulSessionsTable, MindfulRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MindfulSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _startMsMeta = const VerificationMeta(
+    'startMs',
+  );
+  @override
+  late final GeneratedColumn<int> startMs = GeneratedColumn<int>(
+    'start_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _secondsMeta = const VerificationMeta(
+    'seconds',
+  );
+  @override
+  late final GeneratedColumn<int> seconds = GeneratedColumn<int>(
+    'seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, startMs, seconds, kind];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mindful_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MindfulRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('start_ms')) {
+      context.handle(
+        _startMsMeta,
+        startMs.isAcceptableOrUnknown(data['start_ms']!, _startMsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startMsMeta);
+    }
+    if (data.containsKey('seconds')) {
+      context.handle(
+        _secondsMeta,
+        seconds.isAcceptableOrUnknown(data['seconds']!, _secondsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_secondsMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MindfulRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MindfulRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      startMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_ms'],
+      )!,
+      seconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}seconds'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+    );
+  }
+
+  @override
+  $MindfulSessionsTable createAlias(String alias) {
+    return $MindfulSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class MindfulRow extends DataClass implements Insertable<MindfulRow> {
+  final int id;
+  final int startMs;
+  final int seconds;
+
+  /// `MindfulKind.name`.
+  final String kind;
+  const MindfulRow({
+    required this.id,
+    required this.startMs,
+    required this.seconds,
+    required this.kind,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['start_ms'] = Variable<int>(startMs);
+    map['seconds'] = Variable<int>(seconds);
+    map['kind'] = Variable<String>(kind);
+    return map;
+  }
+
+  MindfulSessionsCompanion toCompanion(bool nullToAbsent) {
+    return MindfulSessionsCompanion(
+      id: Value(id),
+      startMs: Value(startMs),
+      seconds: Value(seconds),
+      kind: Value(kind),
+    );
+  }
+
+  factory MindfulRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MindfulRow(
+      id: serializer.fromJson<int>(json['id']),
+      startMs: serializer.fromJson<int>(json['startMs']),
+      seconds: serializer.fromJson<int>(json['seconds']),
+      kind: serializer.fromJson<String>(json['kind']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'startMs': serializer.toJson<int>(startMs),
+      'seconds': serializer.toJson<int>(seconds),
+      'kind': serializer.toJson<String>(kind),
+    };
+  }
+
+  MindfulRow copyWith({int? id, int? startMs, int? seconds, String? kind}) =>
+      MindfulRow(
+        id: id ?? this.id,
+        startMs: startMs ?? this.startMs,
+        seconds: seconds ?? this.seconds,
+        kind: kind ?? this.kind,
+      );
+  MindfulRow copyWithCompanion(MindfulSessionsCompanion data) {
+    return MindfulRow(
+      id: data.id.present ? data.id.value : this.id,
+      startMs: data.startMs.present ? data.startMs.value : this.startMs,
+      seconds: data.seconds.present ? data.seconds.value : this.seconds,
+      kind: data.kind.present ? data.kind.value : this.kind,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MindfulRow(')
+          ..write('id: $id, ')
+          ..write('startMs: $startMs, ')
+          ..write('seconds: $seconds, ')
+          ..write('kind: $kind')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, startMs, seconds, kind);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MindfulRow &&
+          other.id == this.id &&
+          other.startMs == this.startMs &&
+          other.seconds == this.seconds &&
+          other.kind == this.kind);
+}
+
+class MindfulSessionsCompanion extends UpdateCompanion<MindfulRow> {
+  final Value<int> id;
+  final Value<int> startMs;
+  final Value<int> seconds;
+  final Value<String> kind;
+  const MindfulSessionsCompanion({
+    this.id = const Value.absent(),
+    this.startMs = const Value.absent(),
+    this.seconds = const Value.absent(),
+    this.kind = const Value.absent(),
+  });
+  MindfulSessionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int startMs,
+    required int seconds,
+    required String kind,
+  }) : startMs = Value(startMs),
+       seconds = Value(seconds),
+       kind = Value(kind);
+  static Insertable<MindfulRow> custom({
+    Expression<int>? id,
+    Expression<int>? startMs,
+    Expression<int>? seconds,
+    Expression<String>? kind,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startMs != null) 'start_ms': startMs,
+      if (seconds != null) 'seconds': seconds,
+      if (kind != null) 'kind': kind,
+    });
+  }
+
+  MindfulSessionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? startMs,
+    Value<int>? seconds,
+    Value<String>? kind,
+  }) {
+    return MindfulSessionsCompanion(
+      id: id ?? this.id,
+      startMs: startMs ?? this.startMs,
+      seconds: seconds ?? this.seconds,
+      kind: kind ?? this.kind,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (startMs.present) {
+      map['start_ms'] = Variable<int>(startMs.value);
+    }
+    if (seconds.present) {
+      map['seconds'] = Variable<int>(seconds.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MindfulSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('startMs: $startMs, ')
+          ..write('seconds: $seconds, ')
+          ..write('kind: $kind')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MoodEntriesTable extends MoodEntries
+    with TableInfo<$MoodEntriesTable, MoodRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MoodEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _timeMsMeta = const VerificationMeta('timeMs');
+  @override
+  late final GeneratedColumn<int> timeMs = GeneratedColumn<int>(
+    'time_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valenceMeta = const VerificationMeta(
+    'valence',
+  );
+  @override
+  late final GeneratedColumn<int> valence = GeneratedColumn<int>(
+    'valence',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _feelingsMeta = const VerificationMeta(
+    'feelings',
+  );
+  @override
+  late final GeneratedColumn<String> feelings = GeneratedColumn<String>(
+    'feelings',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _contextsMeta = const VerificationMeta(
+    'contexts',
+  );
+  @override
+  late final GeneratedColumn<String> contexts = GeneratedColumn<String>(
+    'contexts',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    timeMs,
+    valence,
+    feelings,
+    contexts,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mood_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MoodRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('time_ms')) {
+      context.handle(
+        _timeMsMeta,
+        timeMs.isAcceptableOrUnknown(data['time_ms']!, _timeMsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timeMsMeta);
+    }
+    if (data.containsKey('valence')) {
+      context.handle(
+        _valenceMeta,
+        valence.isAcceptableOrUnknown(data['valence']!, _valenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valenceMeta);
+    }
+    if (data.containsKey('feelings')) {
+      context.handle(
+        _feelingsMeta,
+        feelings.isAcceptableOrUnknown(data['feelings']!, _feelingsMeta),
+      );
+    }
+    if (data.containsKey('contexts')) {
+      context.handle(
+        _contextsMeta,
+        contexts.isAcceptableOrUnknown(data['contexts']!, _contextsMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MoodRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MoodRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      timeMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}time_ms'],
+      )!,
+      valence: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}valence'],
+      )!,
+      feelings: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}feelings'],
+      )!,
+      contexts: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contexts'],
+      )!,
+    );
+  }
+
+  @override
+  $MoodEntriesTable createAlias(String alias) {
+    return $MoodEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class MoodRow extends DataClass implements Insertable<MoodRow> {
+  final int id;
+  final int timeMs;
+
+  /// 0 very unpleasant … 6 very pleasant.
+  final int valence;
+
+  /// Comma-separated.
+  final String feelings;
+  final String contexts;
+  const MoodRow({
+    required this.id,
+    required this.timeMs,
+    required this.valence,
+    required this.feelings,
+    required this.contexts,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['time_ms'] = Variable<int>(timeMs);
+    map['valence'] = Variable<int>(valence);
+    map['feelings'] = Variable<String>(feelings);
+    map['contexts'] = Variable<String>(contexts);
+    return map;
+  }
+
+  MoodEntriesCompanion toCompanion(bool nullToAbsent) {
+    return MoodEntriesCompanion(
+      id: Value(id),
+      timeMs: Value(timeMs),
+      valence: Value(valence),
+      feelings: Value(feelings),
+      contexts: Value(contexts),
+    );
+  }
+
+  factory MoodRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MoodRow(
+      id: serializer.fromJson<int>(json['id']),
+      timeMs: serializer.fromJson<int>(json['timeMs']),
+      valence: serializer.fromJson<int>(json['valence']),
+      feelings: serializer.fromJson<String>(json['feelings']),
+      contexts: serializer.fromJson<String>(json['contexts']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'timeMs': serializer.toJson<int>(timeMs),
+      'valence': serializer.toJson<int>(valence),
+      'feelings': serializer.toJson<String>(feelings),
+      'contexts': serializer.toJson<String>(contexts),
+    };
+  }
+
+  MoodRow copyWith({
+    int? id,
+    int? timeMs,
+    int? valence,
+    String? feelings,
+    String? contexts,
+  }) => MoodRow(
+    id: id ?? this.id,
+    timeMs: timeMs ?? this.timeMs,
+    valence: valence ?? this.valence,
+    feelings: feelings ?? this.feelings,
+    contexts: contexts ?? this.contexts,
+  );
+  MoodRow copyWithCompanion(MoodEntriesCompanion data) {
+    return MoodRow(
+      id: data.id.present ? data.id.value : this.id,
+      timeMs: data.timeMs.present ? data.timeMs.value : this.timeMs,
+      valence: data.valence.present ? data.valence.value : this.valence,
+      feelings: data.feelings.present ? data.feelings.value : this.feelings,
+      contexts: data.contexts.present ? data.contexts.value : this.contexts,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MoodRow(')
+          ..write('id: $id, ')
+          ..write('timeMs: $timeMs, ')
+          ..write('valence: $valence, ')
+          ..write('feelings: $feelings, ')
+          ..write('contexts: $contexts')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, timeMs, valence, feelings, contexts);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MoodRow &&
+          other.id == this.id &&
+          other.timeMs == this.timeMs &&
+          other.valence == this.valence &&
+          other.feelings == this.feelings &&
+          other.contexts == this.contexts);
+}
+
+class MoodEntriesCompanion extends UpdateCompanion<MoodRow> {
+  final Value<int> id;
+  final Value<int> timeMs;
+  final Value<int> valence;
+  final Value<String> feelings;
+  final Value<String> contexts;
+  const MoodEntriesCompanion({
+    this.id = const Value.absent(),
+    this.timeMs = const Value.absent(),
+    this.valence = const Value.absent(),
+    this.feelings = const Value.absent(),
+    this.contexts = const Value.absent(),
+  });
+  MoodEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required int timeMs,
+    required int valence,
+    this.feelings = const Value.absent(),
+    this.contexts = const Value.absent(),
+  }) : timeMs = Value(timeMs),
+       valence = Value(valence);
+  static Insertable<MoodRow> custom({
+    Expression<int>? id,
+    Expression<int>? timeMs,
+    Expression<int>? valence,
+    Expression<String>? feelings,
+    Expression<String>? contexts,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (timeMs != null) 'time_ms': timeMs,
+      if (valence != null) 'valence': valence,
+      if (feelings != null) 'feelings': feelings,
+      if (contexts != null) 'contexts': contexts,
+    });
+  }
+
+  MoodEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? timeMs,
+    Value<int>? valence,
+    Value<String>? feelings,
+    Value<String>? contexts,
+  }) {
+    return MoodEntriesCompanion(
+      id: id ?? this.id,
+      timeMs: timeMs ?? this.timeMs,
+      valence: valence ?? this.valence,
+      feelings: feelings ?? this.feelings,
+      contexts: contexts ?? this.contexts,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (timeMs.present) {
+      map['time_ms'] = Variable<int>(timeMs.value);
+    }
+    if (valence.present) {
+      map['valence'] = Variable<int>(valence.value);
+    }
+    if (feelings.present) {
+      map['feelings'] = Variable<String>(feelings.value);
+    }
+    if (contexts.present) {
+      map['contexts'] = Variable<String>(contexts.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MoodEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('timeMs: $timeMs, ')
+          ..write('valence: $valence, ')
+          ..write('feelings: $feelings, ')
+          ..write('contexts: $contexts')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3543,6 +4189,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $WaterEntriesTable waterEntries = $WaterEntriesTable(this);
   late final $WeightEntriesTable weightEntries = $WeightEntriesTable(this);
   late final $ExerciseSetsTable exerciseSets = $ExerciseSetsTable(this);
+  late final $MindfulSessionsTable mindfulSessions = $MindfulSessionsTable(
+    this,
+  );
+  late final $MoodEntriesTable moodEntries = $MoodEntriesTable(this);
   late final Index stepIntervalsEnd = Index(
     'step_intervals_end',
     'CREATE INDEX step_intervals_end ON step_intervals (end_ms)',
@@ -3575,6 +4225,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'exercise_sets_exercise',
     'CREATE INDEX exercise_sets_exercise ON exercise_sets (exercise_id, time_ms)',
   );
+  late final Index mindfulSessionsStart = Index(
+    'mindful_sessions_start',
+    'CREATE INDEX mindful_sessions_start ON mindful_sessions (start_ms)',
+  );
+  late final Index moodEntriesTime = Index(
+    'mood_entries_time',
+    'CREATE INDEX mood_entries_time ON mood_entries (time_ms)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3590,6 +4248,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     waterEntries,
     weightEntries,
     exerciseSets,
+    mindfulSessions,
+    moodEntries,
     stepIntervalsEnd,
     workoutsStart,
     workoutPointsWorkout,
@@ -3598,6 +4258,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     waterEntriesTime,
     weightEntriesTime,
     exerciseSetsExercise,
+    mindfulSessionsStart,
+    moodEntriesTime,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6069,6 +6731,389 @@ typedef $$ExerciseSetsTableProcessedTableManager =
       ExerciseSet,
       PrefetchHooks Function()
     >;
+typedef $$MindfulSessionsTableCreateCompanionBuilder =
+    MindfulSessionsCompanion Function({
+      Value<int> id,
+      required int startMs,
+      required int seconds,
+      required String kind,
+    });
+typedef $$MindfulSessionsTableUpdateCompanionBuilder =
+    MindfulSessionsCompanion Function({
+      Value<int> id,
+      Value<int> startMs,
+      Value<int> seconds,
+      Value<String> kind,
+    });
+
+class $$MindfulSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $MindfulSessionsTable> {
+  $$MindfulSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startMs => $composableBuilder(
+    column: $table.startMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get seconds => $composableBuilder(
+    column: $table.seconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MindfulSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MindfulSessionsTable> {
+  $$MindfulSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startMs => $composableBuilder(
+    column: $table.startMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get seconds => $composableBuilder(
+    column: $table.seconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MindfulSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MindfulSessionsTable> {
+  $$MindfulSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get startMs =>
+      $composableBuilder(column: $table.startMs, builder: (column) => column);
+
+  GeneratedColumn<int> get seconds =>
+      $composableBuilder(column: $table.seconds, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+}
+
+class $$MindfulSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MindfulSessionsTable,
+          MindfulRow,
+          $$MindfulSessionsTableFilterComposer,
+          $$MindfulSessionsTableOrderingComposer,
+          $$MindfulSessionsTableAnnotationComposer,
+          $$MindfulSessionsTableCreateCompanionBuilder,
+          $$MindfulSessionsTableUpdateCompanionBuilder,
+          (
+            MindfulRow,
+            BaseReferences<_$AppDatabase, $MindfulSessionsTable, MindfulRow>,
+          ),
+          MindfulRow,
+          PrefetchHooks Function()
+        > {
+  $$MindfulSessionsTableTableManager(
+    _$AppDatabase db,
+    $MindfulSessionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MindfulSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MindfulSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MindfulSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> startMs = const Value.absent(),
+                Value<int> seconds = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+              }) => MindfulSessionsCompanion(
+                id: id,
+                startMs: startMs,
+                seconds: seconds,
+                kind: kind,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int startMs,
+                required int seconds,
+                required String kind,
+              }) => MindfulSessionsCompanion.insert(
+                id: id,
+                startMs: startMs,
+                seconds: seconds,
+                kind: kind,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MindfulSessionsTable, MindfulRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $MindfulSessionsTable,
+                    MindfulRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MindfulSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MindfulSessionsTable,
+      MindfulRow,
+      $$MindfulSessionsTableFilterComposer,
+      $$MindfulSessionsTableOrderingComposer,
+      $$MindfulSessionsTableAnnotationComposer,
+      $$MindfulSessionsTableCreateCompanionBuilder,
+      $$MindfulSessionsTableUpdateCompanionBuilder,
+      (
+        MindfulRow,
+        BaseReferences<_$AppDatabase, $MindfulSessionsTable, MindfulRow>,
+      ),
+      MindfulRow,
+      PrefetchHooks Function()
+    >;
+typedef $$MoodEntriesTableCreateCompanionBuilder =
+    MoodEntriesCompanion Function({
+      Value<int> id,
+      required int timeMs,
+      required int valence,
+      Value<String> feelings,
+      Value<String> contexts,
+    });
+typedef $$MoodEntriesTableUpdateCompanionBuilder =
+    MoodEntriesCompanion Function({
+      Value<int> id,
+      Value<int> timeMs,
+      Value<int> valence,
+      Value<String> feelings,
+      Value<String> contexts,
+    });
+
+class $$MoodEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $MoodEntriesTable> {
+  $$MoodEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get timeMs => $composableBuilder(
+    column: $table.timeMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get valence => $composableBuilder(
+    column: $table.valence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get feelings => $composableBuilder(
+    column: $table.feelings,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contexts => $composableBuilder(
+    column: $table.contexts,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MoodEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $MoodEntriesTable> {
+  $$MoodEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get timeMs => $composableBuilder(
+    column: $table.timeMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get valence => $composableBuilder(
+    column: $table.valence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get feelings => $composableBuilder(
+    column: $table.feelings,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contexts => $composableBuilder(
+    column: $table.contexts,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MoodEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MoodEntriesTable> {
+  $$MoodEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get timeMs =>
+      $composableBuilder(column: $table.timeMs, builder: (column) => column);
+
+  GeneratedColumn<int> get valence =>
+      $composableBuilder(column: $table.valence, builder: (column) => column);
+
+  GeneratedColumn<String> get feelings =>
+      $composableBuilder(column: $table.feelings, builder: (column) => column);
+
+  GeneratedColumn<String> get contexts =>
+      $composableBuilder(column: $table.contexts, builder: (column) => column);
+}
+
+class $$MoodEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MoodEntriesTable,
+          MoodRow,
+          $$MoodEntriesTableFilterComposer,
+          $$MoodEntriesTableOrderingComposer,
+          $$MoodEntriesTableAnnotationComposer,
+          $$MoodEntriesTableCreateCompanionBuilder,
+          $$MoodEntriesTableUpdateCompanionBuilder,
+          (MoodRow, BaseReferences<_$AppDatabase, $MoodEntriesTable, MoodRow>),
+          MoodRow,
+          PrefetchHooks Function()
+        > {
+  $$MoodEntriesTableTableManager(_$AppDatabase db, $MoodEntriesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MoodEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MoodEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MoodEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> timeMs = const Value.absent(),
+                Value<int> valence = const Value.absent(),
+                Value<String> feelings = const Value.absent(),
+                Value<String> contexts = const Value.absent(),
+              }) => MoodEntriesCompanion(
+                id: id,
+                timeMs: timeMs,
+                valence: valence,
+                feelings: feelings,
+                contexts: contexts,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int timeMs,
+                required int valence,
+                Value<String> feelings = const Value.absent(),
+                Value<String> contexts = const Value.absent(),
+              }) => MoodEntriesCompanion.insert(
+                id: id,
+                timeMs: timeMs,
+                valence: valence,
+                feelings: feelings,
+                contexts: contexts,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MoodEntriesTable, MoodRow>(table),
+                  BaseReferences<_$AppDatabase, $MoodEntriesTable, MoodRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MoodEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MoodEntriesTable,
+      MoodRow,
+      $$MoodEntriesTableFilterComposer,
+      $$MoodEntriesTableOrderingComposer,
+      $$MoodEntriesTableAnnotationComposer,
+      $$MoodEntriesTableCreateCompanionBuilder,
+      $$MoodEntriesTableUpdateCompanionBuilder,
+      (MoodRow, BaseReferences<_$AppDatabase, $MoodEntriesTable, MoodRow>),
+      MoodRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6093,4 +7138,8 @@ class $AppDatabaseManager {
       $$WeightEntriesTableTableManager(_db, _db.weightEntries);
   $$ExerciseSetsTableTableManager get exerciseSets =>
       $$ExerciseSetsTableTableManager(_db, _db.exerciseSets);
+  $$MindfulSessionsTableTableManager get mindfulSessions =>
+      $$MindfulSessionsTableTableManager(_db, _db.mindfulSessions);
+  $$MoodEntriesTableTableManager get moodEntries =>
+      $$MoodEntriesTableTableManager(_db, _db.moodEntries);
 }

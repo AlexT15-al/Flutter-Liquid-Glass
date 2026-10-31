@@ -38,6 +38,8 @@ class DataTransfer {
     final weight = await _db.select(_db.weightEntries).get();
     final sets = await _db.select(_db.exerciseSets).get();
     final settings = await _db.select(_db.keyValues).get();
+    final mindful = await _db.select(_db.mindfulSessions).get();
+    final moods = await _db.select(_db.moodEntries).get();
 
     return {
       'steps.csv': Csv.encode(
@@ -144,6 +146,19 @@ class DataTransfer {
         ['session_start', 'exercise', 'reps', 'kg'],
         [
           for (final r in sets) [_time(r.timeMs), r.exerciseId, r.reps, r.kg],
+        ],
+      ),
+      'mindful_minutes.csv': Csv.encode(
+        ['start', 'seconds', 'kind'],
+        [
+          for (final r in mindful) [_time(r.startMs), r.seconds, r.kind],
+        ],
+      ),
+      'moods.csv': Csv.encode(
+        ['time', 'valence_0_to_6', 'feelings', 'contexts'],
+        [
+          for (final r in moods)
+            [_time(r.timeMs), r.valence, r.feelings, r.contexts],
         ],
       ),
       'settings.csv': Csv.encode(
@@ -362,6 +377,50 @@ class DataTransfer {
         }
         await _db.insertSets(rows);
         added += rows.length;
+      }
+
+      // Mindful minutes and moods.
+      if (file('mindful_minutes.csv') case final text?) {
+        final have = {
+          for (final r in await _db.select(_db.mindfulSessions).get())
+            r.startMs,
+        };
+        for (final row in Csv.decode(text)) {
+          final start = _ms(row['start']);
+          final seconds = int.tryParse(row['seconds'] ?? '');
+          if (start == null || seconds == null || !have.add(start)) continue;
+          await _db
+              .into(_db.mindfulSessions)
+              .insert(
+                MindfulSessionsCompanion.insert(
+                  startMs: start,
+                  seconds: seconds,
+                  kind: (row['kind'] ?? '').isEmpty ? 'meditate' : row['kind']!,
+                ),
+              );
+          added++;
+        }
+      }
+      if (file('moods.csv') case final text?) {
+        final have = {
+          for (final r in await _db.select(_db.moodEntries).get()) r.timeMs,
+        };
+        for (final row in Csv.decode(text)) {
+          final time = _ms(row['time']);
+          final valence = int.tryParse(row['valence_0_to_6'] ?? '');
+          if (time == null || valence == null || !have.add(time)) continue;
+          await _db
+              .into(_db.moodEntries)
+              .insert(
+                MoodEntriesCompanion.insert(
+                  timeMs: time,
+                  valence: valence.clamp(0, 6),
+                  feelings: Value(row['feelings'] ?? ''),
+                  contexts: Value(row['contexts'] ?? ''),
+                ),
+              );
+          added++;
+        }
       }
 
       // Settings: the file's values win.

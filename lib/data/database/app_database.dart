@@ -153,6 +153,33 @@ class ExerciseSets extends Table {
   RealColumn get kg => real().nullable()();
 }
 
+/// Minutes breathing or meditating.
+@DataClassName('MindfulRow')
+@TableIndex(name: 'mindful_sessions_start', columns: {#startMs})
+class MindfulSessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get startMs => integer()();
+  IntColumn get seconds => integer()();
+
+  /// `MindfulKind.name`.
+  TextColumn get kind => text()();
+}
+
+/// A State of Mind entry.
+@DataClassName('MoodRow')
+@TableIndex(name: 'mood_entries_time', columns: {#timeMs})
+class MoodEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get timeMs => integer()();
+
+  /// 0 very unpleasant … 6 very pleasant.
+  IntColumn get valence => integer()();
+
+  /// Comma-separated.
+  TextColumn get feelings => text().withDefault(const Constant(''))();
+  TextColumn get contexts => text().withDefault(const Constant(''))();
+}
+
 @DriftDatabase(
   tables: [
     StepIntervals,
@@ -165,6 +192,8 @@ class ExerciseSets extends Table {
     WaterEntries,
     WeightEntries,
     ExerciseSets,
+    MindfulSessions,
+    MoodEntries,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -176,7 +205,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forExecutor(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -209,6 +238,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await m.createTable(exerciseSets);
         await m.createIndex(exerciseSetsExercise);
+      }
+      if (from < 7) {
+        await m.createTable(mindfulSessions);
+        await m.createIndex(mindfulSessionsStart);
+        await m.createTable(moodEntries);
+        await m.createIndex(moodEntriesTime);
       }
     },
     // Route points go with their workout.

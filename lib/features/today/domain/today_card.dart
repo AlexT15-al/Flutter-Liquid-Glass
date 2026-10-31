@@ -74,5 +74,6 @@ enum TodayCard {
     TodayCard.sleep,
     TodayCard.water,
     TodayCard.nutrition,
+    TodayCard.mindfulness,
   ];
 }

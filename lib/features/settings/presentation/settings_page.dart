@@ -102,7 +102,8 @@ class SettingsPage extends StatelessWidget {
           ),
           const GroupCaption(
             'CSV files a spreadsheet opens: steps, workouts and routes, '
-            'sleep, food, water, weight, training and settings. Importing '
+            'sleep, food, water, weight, training, mindfulness and settings. '
+            'Importing '
             'adds what is not already here.',
             footer: true,
           ),
