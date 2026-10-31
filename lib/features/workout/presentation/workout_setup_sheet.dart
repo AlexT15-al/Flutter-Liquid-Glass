@@ -6,6 +6,7 @@ import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_glass.dart';
 import '../../../domain/workout.dart';
+import '../../../platform/live_activity.dart';
 import '../../../shared/widgets/glass_action_button.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_sheet.dart';
@@ -21,6 +22,8 @@ Future<void> showWorkoutSetup(BuildContext context, WorkoutType type) async {
     builder: (context, scroll) => _SetupSheet(controller: scroll, type: type),
   );
   if (goal == null) return;
+  // Notifications first, so the workout can show outside the app.
+  await const LiveActivity().prepare();
   await controller.start(type: type, goal: goal, profile: profile);
 }
 

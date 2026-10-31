@@ -138,7 +138,9 @@ class _GroupedRowState extends State<GroupedRow> {
               ),
               child: Text(widget.value!),
             ),
-          if (widget.onTap != null && widget.editor == null) ...[
+          if (widget.onTap != null &&
+              widget.editor == null &&
+              widget.trailing == null) ...[
             const SizedBox(width: 6),
             Icon(
               CupertinoIcons.chevron_forward,

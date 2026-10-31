@@ -25,6 +25,7 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final preferences = HaloScope.preferencesOf(context);
     return HaloPage(
       appBar: haloBar(context, title: 'Settings'),
       body: ListView(
@@ -37,6 +38,34 @@ class SettingsPage extends StatelessWidget {
         children: [
           const GroupCaption('Appearance'),
           const _AppearanceCard(),
+          const SizedBox(height: HaloMetrics.cardGap),
+          GroupedCard(
+            children: [
+              _FlagRow(
+                title: 'Haptic Feedback',
+                watch: preferences.watchHaptics,
+                set: preferences.setHaptics,
+              ),
+            ],
+          ),
+          const SizedBox(height: HaloMetrics.sectionTopGap),
+          const GroupCaption('Workouts'),
+          GroupedCard(
+            children: [
+              _FlagRow(
+                title: 'Live Activity',
+                watch: preferences.watchLiveActivity,
+                set: preferences.setLiveActivity,
+              ),
+            ],
+          ),
+          const GroupCaption(
+            'Shows the workout in progress on the Lock Screen and in the '
+            'status bar, and in the Now Bar on Galaxy phones. Outdoor '
+            'workouts on Android still show a small notification while they '
+            'record the route.',
+            footer: true,
+          ),
           const SizedBox(height: HaloMetrics.sectionTopGap),
           const GroupCaption('You'),
           GroupedCard(
@@ -150,6 +179,46 @@ class _MotionAccessCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A setting that is on or off. As in iOS Settings, the switch is the only
+/// target: the row around it does not highlight.
+class _FlagRow extends StatefulWidget {
+  const _FlagRow({required this.title, required this.watch, required this.set});
+
+  final String title;
+  final Stream<bool> Function() watch;
+  final Future<void> Function(bool on) set;
+
+  @override
+  State<_FlagRow> createState() => _FlagRowState();
+}
+
+class _FlagRowState extends State<_FlagRow> {
+  late final Stream<bool> _value = widget.watch();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<bool>(
+      stream: _value,
+      initialData: true,
+      builder: (context, snapshot) {
+        final on = snapshot.data ?? true;
+        return GroupedRow(
+          title: widget.title,
+          trailing: GlassSwitch(
+            value: on,
+            onChanged: widget.set,
+            activeColor: HaloColors.exercise.resolveFrom(context),
+            settings: HaloGlass.of(context),
+            quality: HaloGlass.quality,
+            useOwnLayer: true,
+            semanticLabel: widget.title,
+          ),
+        );
+      },
     );
   }
 }

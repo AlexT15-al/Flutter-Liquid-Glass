@@ -21,6 +21,8 @@ class HaloPreferences {
   static const _todayCardsKey = 'today_cards';
   static const _stepCounterKey = 'step_counter';
   static const _themeModeKey = 'theme_mode';
+  static const _hapticsKey = 'haptics';
+  static const _liveActivityKey = 'live_activity';
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
@@ -36,6 +38,26 @@ class HaloPreferences {
 
   Future<void> setThemeMode(AppThemeMode mode) =>
       _db.writeValue(_themeModeKey, mode.name);
+
+  // ── Feedback ───────────────────────────────────────────────────────────────
+
+  /// Haptic feedback across the app. On unless turned off.
+  Stream<bool> watchHaptics() => _watchFlag(_hapticsKey);
+  Future<bool> readHaptics() => _readFlag(_hapticsKey);
+  Future<void> setHaptics(bool on) => _db.writeValue(_hapticsKey, '$on');
+
+  /// The workout in progress on the lock screen, the status bar and, on a
+  /// Galaxy, the Now Bar. On unless turned off.
+  Stream<bool> watchLiveActivity() => _watchFlag(_liveActivityKey);
+  Future<bool> readLiveActivity() => _readFlag(_liveActivityKey);
+  Future<void> setLiveActivity(bool on) =>
+      _db.writeValue(_liveActivityKey, '$on');
+
+  Stream<bool> _watchFlag(String key) =>
+      _db.watchValue(key).map((raw) => raw != 'false').distinct();
+
+  Future<bool> _readFlag(String key) async =>
+      await _db.readValue(key) != 'false';
 
   // ── Profile ────────────────────────────────────────────────────────────────
 

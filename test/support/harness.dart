@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show DatabaseConnection, driftRuntimeOptions;
 import 'package:drift/native.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:halo/app/halo_app.dart';
@@ -40,6 +41,17 @@ class Harness {
     DateTime Function()? clock,
   }) async {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+    // The app's own platform channels, answered the way a phone that has
+    // allowed everything would.
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('halo/permissions'),
+      (call) async => call.method == 'openSettings' ? null : 'granted',
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('halo/live_activity'),
+      (call) async => null,
+    );
     final db = AppDatabase.forExecutor(
       DatabaseConnection(
         NativeDatabase.memory(),

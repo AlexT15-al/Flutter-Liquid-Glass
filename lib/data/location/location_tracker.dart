@@ -2,23 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../domain/route.dart';
-import '../../platform/android_permissions.dart';
 
 /// Whether a workout can be followed by GPS.
 enum LocationAccess { granted, denied, serviceOff }
 
 /// The phone's GPS, as a stream of route points for a workout.
 ///
-/// While it is listened to on Android it runs a foreground service with an
-/// ongoing notification, which is what keeps fixes coming with the screen off
-/// and the phone in a pocket. On iOS it asks for background updates, which
-/// shows the blue location pill while a workout records.
+/// On Android, fixes keep coming with the screen off because the workout
+/// runs a foreground service of type location (see `WorkoutService`), whose
+/// notification is the live workout itself. On iOS it asks for background
+/// updates, which shows the blue location pill while a workout records.
 class LocationTracker {
   const LocationTracker();
 
-  /// Asks for location, and on Android 13+ for notifications too, so the
-  /// recording notification is not silently hidden. From a button the user
-  /// pressed: Start.
+  /// Asks for location. From a button the user pressed: Start.
   Future<LocationAccess> ensureAccess() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       return LocationAccess.serviceOff;
@@ -31,10 +28,6 @@ class LocationTracker {
         permission == LocationPermission.deniedForever ||
         permission == LocationPermission.unableToDetermine) {
       return LocationAccess.denied;
-    }
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      // Refusing notifications does not stop the recording, only hides it.
-      await AndroidPermissions.request(AndroidPermissions.postNotifications);
     }
     return LocationAccess.granted;
   }
@@ -66,14 +59,6 @@ class LocationTracker {
           accuracy: LocationAccuracy.bestForNavigation,
           distanceFilter: 3,
           intervalDuration: const Duration(seconds: 1),
-          foregroundNotificationConfig: const ForegroundNotificationConfig(
-            notificationTitle: 'Workout in progress',
-            notificationText: 'Halo is recording your route.',
-            notificationChannelName: 'Workouts',
-            notificationIcon: AndroidResource(name: 'ic_stat_halo'),
-            setOngoing: true,
-            enableWakeLock: true,
-          ),
         );
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:

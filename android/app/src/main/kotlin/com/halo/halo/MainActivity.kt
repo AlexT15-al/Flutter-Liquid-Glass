@@ -29,6 +29,15 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result -> handle(call, result) }
+        LiveActivityChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    /** A tap on the live workout notification: bring the workout up. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == WorkoutNotification.ACTION_OPEN) {
+            LiveActivityChannel.send("open", null)
+        }
     }
 
     private fun handle(call: MethodCall, result: MethodChannel.Result) {

@@ -14,9 +14,12 @@ import 'data/location/location_tracker.dart';
 import 'data/preferences/halo_preferences.dart';
 import 'data/workouts/workout_repository.dart';
 import 'features/workout/live/workout_controller.dart';
+import 'features/workout/live/workout_live_activity.dart';
+import 'platform/haptics.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Flutter's binding, with the gate that turns haptics off when asked.
+  HaloBinding.ensureInitialized();
 
   // Portrait only: every screen is laid out for a phone held upright, and a
   // live workout must not rotate when the phone moves in a pocket or armband.
@@ -49,6 +52,14 @@ Future<void> main() async {
   // rings that then jump, and opens in the stored appearance.
   await activity.load();
   final themeMode = await preferences.readThemeMode();
+  Haptics.enabled = await preferences.readHaptics();
+  preferences.watchHaptics().listen((on) => Haptics.enabled = on);
+
+  // The workout on the lock screen, the status bar and the Now Bar.
+  WorkoutLiveActivity(
+    controller: workoutController,
+    enabled: preferences.watchLiveActivity(),
+  ).attach();
 
   // Not awaited: checking access and opening the sensor must not hold the
   // first frame. It never prompts; asking is a button on Today.
