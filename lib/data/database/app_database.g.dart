@@ -707,16 +707,18 @@ typedef $$StepIntervalsTableProcessedTableManager =
       StepInterval,
       PrefetchHooks Function()
     >;
-typedef $$KeyValuesTableCreateCompanionBuilder = KeyValuesCompanion Function({
-  required String key,
-  required String value,
-  Value<int> rowid,
-});
-typedef $$KeyValuesTableUpdateCompanionBuilder = KeyValuesCompanion Function({
-  Value<String> key,
-  Value<String> value,
-  Value<int> rowid,
-});
+typedef $$KeyValuesTableCreateCompanionBuilder =
+    KeyValuesCompanion Function({
+      required String key,
+      required String value,
+      Value<int> rowid,
+    });
+typedef $$KeyValuesTableUpdateCompanionBuilder =
+    KeyValuesCompanion Function({
+      Value<String> key,
+      Value<String> value,
+      Value<int> rowid,
+    });
 
 class $$KeyValuesTableFilterComposer
     extends Composer<_$AppDatabase, $KeyValuesTable> {
@@ -800,16 +802,22 @@ class $$KeyValuesTableTableManager
               $$KeyValuesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$KeyValuesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> key = const Value.absent(),
-            Value<String> value = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) => KeyValuesCompanion(key: key, value: value, rowid: rowid),
-          createCompanionCallback: ({
-            required String key,
-            required String value,
-            Value<int> rowid = const Value.absent(),
-          }) => KeyValuesCompanion.insert(key: key, value: value, rowid: rowid),
+          updateCompanionCallback:
+              ({
+                Value<String> key = const Value.absent(),
+                Value<String> value = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => KeyValuesCompanion(key: key, value: value, rowid: rowid),
+          createCompanionCallback:
+              ({
+                required String key,
+                required String value,
+                Value<int> rowid = const Value.absent(),
+              }) => KeyValuesCompanion.insert(
+                key: key,
+                value: value,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
