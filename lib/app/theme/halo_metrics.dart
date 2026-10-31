@@ -88,4 +88,17 @@ abstract final class HaloMetrics {
   static const double sectionTitleGap = 10.0;
 
   static const double separatorThickness = 0.33;
+
+  // ── Sheets ─────────────────────────────────────────────────────────────────
+
+  /// Top corner radius of a sheet. The sheet route already clips to the
+  /// device's own screen radius, which is shallower than Apple's sheet, so the
+  /// content clips again, tighter, as a squircle.
+  static const double sheetTopRadius = 44.0;
+
+  static const double sheetTopPadding = 16.0;
+  static const double sheetBottomPadding = 24.0;
+
+  /// Gap between a sheet's header row and its first content.
+  static const double sheetHeaderGap = 12.0;
 }

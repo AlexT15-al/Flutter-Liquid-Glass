@@ -100,6 +100,9 @@ class _HaloChromeState extends State<HaloChrome> {
 
     return Stack(
       children: [
+        // What shows around the page when a sheet scales it back: black, in
+        // both appearances, as on iOS. Nothing else ever uncovers it.
+        const Positioned.fill(child: ColoredBox(color: Color(0xFF000000))),
         Positioned.fill(child: widget.child),
         Positioned(
           left: 0,
@@ -171,8 +174,9 @@ class _HaloChromeState extends State<HaloChrome> {
       selectedLabelColor: accent,
       unselectedIconColor: label,
       unselectedLabelColor: label,
-      indicatorColor: label.withValues(alpha: 0.12),
-      settings: HaloGlass.of(context),
+      // The indicator as Music draws it.
+      indicatorColor: label.withValues(alpha: 0.20),
+      settings: HaloGlass.tabBar(context),
       quality: HaloGlass.quality,
       interactionBehavior: GlassInteractionBehavior.full,
       searchConfig: GlassSearchBarConfig(

@@ -18,9 +18,27 @@ abstract final class HaloColors {
     darkColor: Color(0xFF000000),
   );
 
-  /// A solid card on [background]: secondarySystemGroupedBackground.
-  static const card = CupertinoDynamicColor.withBrightness(
+  /// A solid card: secondarySystemGroupedBackground.
+  ///
+  /// Elevation-aware. Inside a presented sheet iOS raises the interface level,
+  /// and a dark card one step off the sheet's `#1C1C1E` has to be `#2C2C2E` or
+  /// it vanishes into it. Resolving against the context picks the right one,
+  /// so the same card works on a page and on a sheet.
+  static const card = CupertinoDynamicColor(
     color: Color(0xFFFFFFFF),
+    darkColor: Color(0xFF1C1C1E),
+    highContrastColor: Color(0xFFFFFFFF),
+    darkHighContrastColor: Color(0xFF1C1C1E),
+    elevatedColor: Color(0xFFFFFFFF),
+    darkElevatedColor: Color(0xFF2C2C2E),
+    highContrastElevatedColor: Color(0xFFFFFFFF),
+    darkHighContrastElevatedColor: Color(0xFF2C2C2E),
+  );
+
+  /// The surface of a presented sheet: one step off the page in dark, the
+  /// grouped background in light so white cards still sit on something.
+  static const sheet = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFFF2F2F7),
     darkColor: Color(0xFF1C1C1E),
   );
 

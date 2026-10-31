@@ -3,29 +3,24 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
-import '../../../app/theme/halo_glass.dart';
-import '../../../app/theme/halo_metrics.dart';
 import '../../../data/preferences/halo_preferences.dart';
+import '../../../shared/widgets/halo_sheet.dart';
 import '../domain/today_card.dart';
 
 /// Opens Edit Summary: choose which cards Today shows, and in what order.
 ///
-/// A sheet, the way Fitness edits its Summary: the list is the page's cards,
-/// with a delete badge and a grabber on each shown card and an insert badge on
-/// each hidden one. Every change is written straight away, so there is no
-/// Cancel to lose work to; Done only closes.
+/// The list is the page's cards: a delete badge and a grabber on each shown
+/// card, an insert badge on each hidden one. Every change is written at once,
+/// so there is nothing to lose and no Cancel; the tick only closes.
 Future<void> showEditTodaySheet(BuildContext context) async {
   final preferences = HaloScope.preferencesOf(context);
   final current = await preferences.watchTodayCards().first;
   if (!context.mounted) return;
 
-  await GlassModalSheet.show<void>(
-    context: context,
-    initialState: GlassSheetState.full,
-    detents: const {GlassSheetDetent.large},
-    settings: HaloGlass.of(context),
-    quality: HaloGlass.quality,
-    builder: (_) => _EditTodaySheet(
+  await showHaloSheet<void>(
+    context,
+    builder: (context, controller) => _EditTodaySheet(
+      controller: controller,
       preferences: preferences,
       initial: current,
     ),
@@ -33,8 +28,13 @@ Future<void> showEditTodaySheet(BuildContext context) async {
 }
 
 class _EditTodaySheet extends StatefulWidget {
-  const _EditTodaySheet({required this.preferences, required this.initial});
+  const _EditTodaySheet({
+    required this.controller,
+    required this.preferences,
+    required this.initial,
+  });
 
+  final ScrollController controller;
   final HaloPreferences preferences;
   final List<TodayCard> initial;
 
@@ -65,22 +65,23 @@ class _EditTodaySheetState extends State<_EditTodaySheet> {
           fontSize: 17,
         );
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        HaloMetrics.cardPadding,
-        8,
-        HaloMetrics.cardPadding,
-        32,
+    return HaloSheet(
+      controller: widget.controller,
+      header: HaloSheetHeader(
+        title: 'Edit Summary',
+        trailing: SheetConfirmButton(
+          onTap: () => Navigator.of(context).pop(),
+        ),
       ),
       children: [
-        _Header(onDone: () => Navigator.of(context).pop()),
-        const SizedBox(height: 12),
-        const _SectionLabel('Shown on Today'),
+        const SectionCaption('Shown on Today'),
+        // Solid sections pick the elevated card colour inside a sheet on their
+        // own: the sheet route raises the interface level.
         GlassReorderableList.grouped(
           surfaceStyle: GlassSurfaceStyle.solid,
           itemCount: _shown.length,
-          // `onReorderItem` hands over the index the item settled at, already
-          // adjusted for its own removal.
+          // Hands over the index the item settled at, already adjusted for
+          // its own removal.
           onReorderItem: (from, to) {
             final next = List.of(_shown);
             next.insert(to, next.removeAt(from));
@@ -102,11 +103,11 @@ class _EditTodaySheetState extends State<_EditTodaySheet> {
           },
         ),
         if (_hidden.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const _SectionLabel('More Cards'),
+          const SizedBox(height: 28),
+          const SectionCaption('More Cards'),
           GlassGroupedSection(
-            // The list above already sits inside the page padding; the
-            // section's own default margin would inset it a second time.
+            // The list above already sits inside the sheet's padding; the
+            // section's default margin would inset it a second time.
             margin: EdgeInsets.zero,
             surfaceStyle: GlassSurfaceStyle.solid,
             children: [
@@ -124,69 +125,6 @@ class _EditTodaySheetState extends State<_EditTodaySheet> {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.onDone});
-
-  final VoidCallback onDone;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: HaloMetrics.barButtonSize,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text(
-            'Edit Summary',
-            style: TextStyle(
-              color: HaloColors.labelOf(context),
-              fontSize: HaloMetrics.barTitleSize,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              minimumSize: const Size(44, 44),
-              onPressed: onDone,
-              child: Text(
-                'Done',
-                style: TextStyle(
-                  color: HaloColors.accent.resolveFrom(context),
-                  fontSize: HaloMetrics.barButtonTextSize,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          color: HaloColors.secondaryLabelOf(context),
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
     );
   }
 }

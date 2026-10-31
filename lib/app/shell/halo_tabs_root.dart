@@ -25,6 +25,14 @@ class HaloTabsRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = HaloTabScope.of(context);
 
+    // A boundary around the whole page, for the sheets' sake: while one is up
+    // the route holds this page on screen and animates it back in scale, and
+    // without a boundary that transform would re-rasterise every glass surface
+    // on it, every frame. With one, the compositor moves a texture.
+    return RepaintBoundary(child: _buildPage(context, controller));
+  }
+
+  Widget _buildPage(BuildContext context, HaloTabController controller) {
     return HaloPage(
       appBar: haloBar(
         context,
