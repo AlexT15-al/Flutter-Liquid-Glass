@@ -4,7 +4,6 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../features/goals/presentation/goals_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
-import '../../features/sleep/presentation/sleep_tab.dart';
 import '../../features/today/presentation/edit_today_sheet.dart';
 import '../../features/today/presentation/today_tab.dart';
 import '../../features/workout/presentation/workout_tab.dart';
@@ -40,10 +39,7 @@ class HaloTabsRoot extends StatefulWidget {
 class _HaloTabsRootState extends State<HaloTabsRoot> {
   final Map<Object, GlassLargeTitleController> _titles = {
     for (final tab in HaloTab.values) tab: GlassLargeTitleController(),
-    _search: GlassLargeTitleController(),
   };
-
-  static const _search = 'search';
 
   @override
   void dispose() {
@@ -63,13 +59,13 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
   }
 
   Widget _buildPage(BuildContext context, HaloTabController controller) {
-    final key = controller.isSearching ? _search : controller.tab;
+    final key = controller.tab;
     final title = _titles[key]!;
 
     return HaloPage(
       appBar: haloBar(
         context,
-        title: controller.isSearching ? 'Search' : controller.tab.title,
+        title: controller.tab.title,
         largeTitleController: title,
         // The root has nothing behind it; the shell would otherwise draw a
         // chevron that does nothing.
@@ -77,7 +73,7 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
         actions: [
           // Edit belongs to Today alone: it is the one tab whose content is
           // the user's own arrangement.
-          if (controller.tab == HaloTab.today && !controller.isSearching)
+          if (controller.tab == HaloTab.today)
             editBarItem(
               editing: false,
               onTap: () => showEditTodaySheet(context),
@@ -93,17 +89,9 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
           ),
         ],
       ),
-      body: GestureDetector(
-        // Tapping the page dismisses the search keyboard, as it does on iOS.
-        onTap: () {
-          if (controller.searchFieldFocused) {
-            FocusManager.instance.primaryFocus?.unfocus();
-          }
-        },
-        child: KeyedSubtree(
-          key: ValueKey(key),
-          child: _buildBody(controller, title),
-        ),
+      body: KeyedSubtree(
+        key: ValueKey(key),
+        child: _buildBody(controller, title),
       ),
     );
   }
@@ -112,20 +100,22 @@ class _HaloTabsRootState extends State<HaloTabsRoot> {
     HaloTabController controller,
     GlassLargeTitleController title,
   ) {
-    if (controller.isSearching) {
-      return TabPlaceholder(
-        titleController: title,
-        icon: const Icon(CupertinoIcons.search),
-        title: 'Search',
-        message: 'Metrics, workouts, foods and settings.',
-      );
-    }
-
     final tab = controller.tab;
     return switch (tab) {
       HaloTab.today => TodayTab(titleController: title),
       HaloTab.workout => WorkoutTab(titleController: title),
-      HaloTab.sleep => SleepTab(titleController: title),
+      HaloTab.nutrition => TabPlaceholder(
+        titleController: title,
+        icon: tab.glyph,
+        title: tab.title,
+        message: 'Meals, calories, water and your target weight.',
+      ),
+      HaloTab.plans => TabPlaceholder(
+        titleController: title,
+        icon: tab.glyph,
+        title: tab.title,
+        message: 'Your week of meals and training, adapted to you.',
+      ),
       HaloTab.health => TabPlaceholder(
         titleController: title,
         icon: tab.glyph,

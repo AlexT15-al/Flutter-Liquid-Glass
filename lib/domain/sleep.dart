@@ -8,7 +8,11 @@ enum SleepStage {
   awake('A', 'Awake'),
   rem('R', 'REM'),
   light('L', 'Light'),
-  deep('D', 'Deep');
+  deep('D', 'Deep'),
+
+  /// Asleep, stage unknown: a night measured from when the phone was last
+  /// and first used, which says when sleep was but not how deep.
+  asleep('S', 'Asleep');
 
   const SleepStage(this.code, this.title);
 
@@ -21,6 +25,7 @@ enum SleepStage {
     'R' => rem,
     'L' => light,
     'D' => deep,
+    'S' => asleep,
     _ => null,
   };
 }
@@ -32,7 +37,12 @@ enum SleepSource {
   tracked,
 
   /// Entered by hand: times only, no stages.
-  manual;
+  manual,
+
+  /// Worked out from the phone's screen: the last use at night and the first
+  /// unlock in the morning, as Samsung Health does. Asleep or awake, no
+  /// stages.
+  phone;
 
   static SleepSource byName(String name) =>
       SleepSource.values.asNameMap()[name] ?? SleepSource.manual;
@@ -57,7 +67,13 @@ class SleepNight {
   /// A stage per minute from [inBed]. Empty for a night entered by hand.
   final List<SleepStage> hypnogram;
 
+  /// A minute-by-minute record, awake or asleep: tracked or from the phone.
   bool get hasStages => hypnogram.isNotEmpty;
+
+  /// Sleep split into REM, light and deep: only a night on the mattress.
+  bool get staged => hypnogram.any(
+    (s) => s == SleepStage.rem || s == SleepStage.light || s == SleepStage.deep,
+  );
 
   Duration get timeInBed => outOfBed.difference(inBed);
 
@@ -103,7 +119,11 @@ class SleepNight {
     if (!hasStages) return timeInBed;
     final m = stageMinutes;
     return Duration(
-      minutes: m[SleepStage.rem]! + m[SleepStage.light]! + m[SleepStage.deep]!,
+      minutes:
+          m[SleepStage.rem]! +
+          m[SleepStage.light]! +
+          m[SleepStage.deep]! +
+          m[SleepStage.asleep]!,
     );
   }
 

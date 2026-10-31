@@ -27,6 +27,11 @@ class Hypnogram extends StatelessWidget {
   /// The stage names down the leading side.
   final bool labels;
 
+  /// The rows a night is drawn in: four stages for a night tracked on the
+  /// mattress, awake and asleep for the rest.
+  static List<SleepStage> rowsFor(SleepNight night) =>
+      night.staged ? order : const [SleepStage.awake, SleepStage.asleep];
+
   static const order = [
     SleepStage.awake,
     SleepStage.rem,
@@ -47,7 +52,8 @@ class Hypnogram extends StatelessWidget {
       painter: _HypnogramPainter(
         stages: night.hasStages
             ? night.hypnogram
-            : List.filled(night.timeInBed.inMinutes, SleepStage.light),
+            : List.filled(night.timeInBed.inMinutes, SleepStage.asleep),
+        rows: rowsFor(night),
         colors: colors,
         grid: grid,
       ),
@@ -65,7 +71,7 @@ class Hypnogram extends StatelessWidget {
                 height: height,
                 child: Column(
                   children: [
-                    for (final stage in order)
+                    for (final stage in rowsFor(night))
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerLeft,
@@ -173,27 +179,28 @@ class _Axis extends StatelessWidget {
 class _HypnogramPainter extends CustomPainter {
   _HypnogramPainter({
     required this.stages,
+    required this.rows,
     required this.colors,
     required this.grid,
   });
 
   final List<SleepStage> stages;
+  final List<SleepStage> rows;
   final Map<SleepStage, Color> colors;
   final Color grid;
 
-  static int _row(SleepStage s) => Hypnogram.order.indexOf(s);
+  int _row(SleepStage s) => rows.indexOf(s);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rows = Hypnogram.order.length;
-    final rowHeight = size.height / rows;
+    final rowHeight = size.height / rows.length;
     final bar = (rowHeight * 0.52).clamp(4.0, 22.0);
 
     // Dotted guides along the middle of each row.
     final guide = Paint()
       ..color = grid
       ..strokeWidth = 1;
-    for (var r = 0; r < rows; r++) {
+    for (var r = 0; r < rows.length; r++) {
       final y = rowHeight * (r + 0.5);
       for (var x = 0.0; x < size.width; x += 6) {
         canvas.drawLine(Offset(x, y), Offset(x + 2, y), guide);
@@ -251,5 +258,8 @@ class _HypnogramPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_HypnogramPainter old) =>
-      old.stages != stages || old.colors != colors || old.grid != grid;
+      old.stages != stages ||
+      old.rows != rows ||
+      old.colors != colors ||
+      old.grid != grid;
 }

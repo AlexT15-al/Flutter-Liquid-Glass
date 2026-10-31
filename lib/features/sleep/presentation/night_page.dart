@@ -223,13 +223,16 @@ abstract final class NightDetails {
           ],
         ),
       ),
-      GroupCaption(
-        night.hasStages
-            ? 'Stages are estimated from how the bed moved and the usual shape '
-                  'of a night. They are a guide, not a medical measurement.'
-            : 'Entered by hand: stages need a night tracked on the mattress.',
-        footer: true,
-      ),
+      GroupCaption(switch (night.source) {
+        SleepSource.tracked =>
+          'Stages are estimated from how the bed moved and the usual shape '
+              'of a night. They are a guide, not a medical measurement.',
+        SleepSource.phone =>
+          'Measured from when you last used your phone and first unlocked '
+              'it. Track a night on the mattress to see its stages.',
+        SleepSource.manual =>
+          'Entered by hand. Track a night on the mattress to see its stages.',
+      }, footer: true),
     ];
   }
 }
@@ -328,7 +331,7 @@ class _StageList extends StatelessWidget {
     final total = minutes.values.fold(0, (a, b) => a + b);
     return Column(
       children: [
-        for (final stage in Hypnogram.order)
+        for (final stage in Hypnogram.rowsFor(night))
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(

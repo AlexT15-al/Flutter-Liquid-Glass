@@ -64,6 +64,14 @@ class Harness {
       const MethodChannel('halo/sleep/minutes'),
       (call) async => null,
     );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('halo/screen_history'),
+      (call) async => switch (call.method) {
+        'hasAccess' => false,
+        'events' => <Object>[],
+        _ => null,
+      },
+    );
     final db = AppDatabase.forExecutor(
       DatabaseConnection(
         NativeDatabase.memory(),
@@ -97,7 +105,11 @@ class Harness {
       steps,
       workouts,
       controller,
-      SleepController(repository: SleepRepository(db), clock: clock),
+      SleepController(
+        repository: SleepRepository(db),
+        preferences: preferences,
+        clock: clock,
+      ),
     );
     await tester.runAsync(() async {
       await activity.load();

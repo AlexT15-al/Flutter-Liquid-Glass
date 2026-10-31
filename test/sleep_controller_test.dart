@@ -4,10 +4,13 @@ import 'package:drift/drift.dart' show DatabaseConnection, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:halo/data/database/app_database.dart';
+import 'package:halo/data/preferences/halo_preferences.dart';
 import 'package:halo/data/sleep/sleep_repository.dart';
 import 'package:halo/data/sleep/sleep_sensor.dart';
+import 'package:halo/domain/phone_use.dart';
 import 'package:halo/domain/sleep.dart';
 import 'package:halo/features/sleep/sleep_controller.dart';
+import 'package:halo/platform/screen_history.dart';
 
 import 'support/sleep_nights.dart';
 
@@ -27,6 +30,29 @@ class _FakeSensor extends SleepSensor {
   @override
   Stream<(int, int)> minutes() => minutesController.stream;
 }
+
+class _FakeHistory extends ScreenHistory {
+  _FakeHistory(this.recorded);
+
+  final List<ScreenEvent> recorded;
+  bool access = true;
+
+  @override
+  bool get supported => true;
+
+  @override
+  Future<bool> hasAccess() async => access;
+
+  @override
+  Future<List<ScreenEvent>> events(DateTime from, DateTime to) async =>
+      recorded;
+}
+
+List<ScreenEvent> _use(DateTime t, int minutes) => [
+  ScreenEvent(t, ScreenEventType.screenOn),
+  ScreenEvent(t, ScreenEventType.unlock),
+  ScreenEvent(t.add(Duration(minutes: minutes)), ScreenEventType.screenOff),
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -123,5 +149,69 @@ void main() {
     expect(night.source, SleepSource.manual);
     expect(night.hasStages, isFalse);
     expect(night.asleep, const Duration(hours: 7, minutes: 30));
+  });
+
+  group('measured from the phone', () {
+    late _FakeHistory history;
+    late HaloPreferences preferences;
+    late SleepController phone;
+
+    setUp(() {
+      final db = AppDatabase.forExecutor(
+        DatabaseConnection(NativeDatabase.memory()),
+      );
+      repository = SleepRepository(db);
+      preferences = HaloPreferences(db);
+      history = _FakeHistory([
+        ..._use(DateTime(2026, 10, 30, 23, 30), 30), // last use: 00:00
+        ..._use(DateTime(2026, 10, 31, 6, 0), 5), // first unlock
+      ]);
+      phone = SleepController(
+        repository: repository,
+        sensor: sensor,
+        history: history,
+        preferences: preferences,
+        clock: () => DateTime(2026, 10, 31, 8),
+      );
+    });
+
+    test('last night is offered, and recorded as measured', () async {
+      await phone.detect();
+      expect(phone.usageAccess, isTrue);
+      final e = phone.detected!;
+      expect(e.start, DateTime(2026, 10, 31));
+      expect(e.end, DateTime(2026, 10, 31, 6));
+
+      final night = await phone.record();
+      expect(night!.source, SleepSource.phone);
+      expect(night.asleep, const Duration(hours: 6));
+      expect(phone.detected, isNull);
+
+      // Recorded, it is not offered again.
+      await phone.detect();
+      expect(phone.detected, isNull);
+    });
+
+    test('the times can be changed before recording', () async {
+      await phone.detect();
+      final night = await phone.record(to: DateTime(2026, 10, 31, 9));
+      expect(night!.timeInBed, const Duration(hours: 9));
+      final stored = (await repository.watchNights(1).first).single;
+      expect(stored.outOfBed, DateTime(2026, 10, 31, 9));
+    });
+
+    test('a night that was not sleep is not offered again', () async {
+      await phone.detect();
+      await phone.dismiss();
+      await phone.detect();
+      expect(phone.detected, isNull);
+    });
+
+    test('without Usage Access there is nothing to offer', () async {
+      history.access = false;
+      await phone.detect();
+      expect(phone.usageAccess, isFalse);
+      expect(phone.detected, isNull);
+    });
   });
 }

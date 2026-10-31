@@ -268,6 +268,21 @@ class AppDatabase extends _$AppDatabase {
             ..limit(1))
           .getSingleOrNull();
 
+  /// Sessions that overlap `[from, to)`, open ones included.
+  Future<List<SleepSession>> sleepSessionsOverlapping(
+    DateTime from,
+    DateTime to,
+  ) {
+    final fromMs = from.millisecondsSinceEpoch;
+    final toMs = to.millisecondsSinceEpoch;
+    return (select(sleepSessions)..where(
+          (t) =>
+              t.startMs.isSmallerThanValue(toMs) &
+              (t.endMs.isNull() | t.endMs.isBiggerThanValue(fromMs)),
+        ))
+        .get();
+  }
+
   /// Finished nights, newest first.
   Stream<List<SleepSession>> watchSleepSessions(int limit) =>
       (select(sleepSessions)

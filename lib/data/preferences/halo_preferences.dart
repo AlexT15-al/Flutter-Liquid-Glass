@@ -25,6 +25,7 @@ class HaloPreferences {
   static const _hapticsKey = 'haptics';
   static const _liveActivityKey = 'live_activity';
   static const _sleepScheduleKey = 'sleep_schedule';
+  static const _sleepDismissedKey = 'sleep_dismissed';
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
@@ -71,6 +72,16 @@ class HaloPreferences {
 
   Future<void> setSleepSchedule(SleepSchedule schedule) =>
       _db.writeValue(_sleepScheduleKey, jsonEncode(schedule.toJson()));
+
+  /// The start of a detected night the user said was not sleep, so it is
+  /// not offered again.
+  Future<DateTime?> readDismissedSleep() async {
+    final raw = await _db.readValue(_sleepDismissedKey);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  Future<void> setDismissedSleep(DateTime start) =>
+      _db.writeValue(_sleepDismissedKey, start.toIso8601String());
 
   static SleepSchedule _decodeSchedule(String? raw) {
     if (raw == null) return const SleepSchedule();

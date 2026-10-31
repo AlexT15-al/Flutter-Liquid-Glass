@@ -65,6 +65,20 @@ class SleepRepository {
     return night;
   }
 
+  /// Whether any night already covers part of `[from, to)`.
+  Future<bool> overlaps(DateTime from, DateTime to) async =>
+      (await _db.sleepSessionsOverlapping(from, to)).isNotEmpty;
+
+  /// A night worked out from the phone's use, as the user recorded it.
+  Future<int> addNight(SleepNight night) => _db.insertSleepSession(
+    SleepSessionsCompanion.insert(
+      startMs: night.inBed.millisecondsSinceEpoch,
+      endMs: Value(night.outOfBed.millisecondsSinceEpoch),
+      source: night.source.name,
+      hypnogram: Value(night.hypnogramCode),
+    ),
+  );
+
   /// A night entered by hand: times only.
   Future<int> addManual(DateTime inBed, DateTime outOfBed) =>
       _db.insertSleepSession(

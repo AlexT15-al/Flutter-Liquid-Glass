@@ -31,6 +31,7 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result -> handle(call, result) }
         LiveActivityChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
         SleepChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
+        ScreenHistoryChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 
     /** A tap on the live workout notification: bring the workout up. */

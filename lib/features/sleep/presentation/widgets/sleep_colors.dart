@@ -9,4 +9,5 @@ Color stageColor(BuildContext context, SleepStage stage) => switch (stage) {
   SleepStage.rem => HaloColors.sleepRem,
   SleepStage.light => HaloColors.sleepLight,
   SleepStage.deep => HaloColors.sleepDeep,
+  SleepStage.asleep => HaloColors.sleep,
 }.resolveFrom(context);

@@ -53,8 +53,6 @@ class HaloChrome extends StatefulWidget {
 }
 
 class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
-  final FocusNode _searchFocusNode = FocusNode();
-
   /// Measures the workout pill, so the live workout grows out of it and
   /// shrinks back into it.
   final GlobalKey _pillKey = GlobalKey();
@@ -63,22 +61,12 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _searchFocusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _searchFocusNode
-      ..removeListener(_onFocusChange)
-      ..dispose();
     super.dispose();
-  }
-
-  void _onFocusChange() {
-    // A focus callback runs outside a build, so the scope is read without
-    // registering a dependency.
-    HaloTabScope.read(context).searchFieldFocused = _searchFocusNode.hasFocus;
   }
 
   /// Android's back button, caught before the Navigator sees it.
@@ -110,9 +98,9 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // The chrome needs an Overlay of its own. The search field lives in the tab
-    // bar, above the Navigator and therefore above the Navigator's Overlay, and
-    // text selection asks for `Overlay.of(context)` on the first keystroke.
+    // The chrome keeps an Overlay of its own: it sits above the Navigator and
+    // so above the Navigator's Overlay, and anything the bar or its accessory
+    // shows over itself asks for `Overlay.of(context)`.
     //
     // The controller is read inside the entry's builder: an OverlayEntry does
     // not rebuild with its parent, so a dependency taken out here would leave
@@ -188,8 +176,7 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
     final accent = HaloColors.accent.resolveFrom(context);
     final label = HaloColors.labelOf(context);
 
-    return GlassTabBar.searchable(
-      isSearchActive: controller.isSearching,
+    return GlassTabBar.bottom(
       selectedIndex: controller.tab.index,
       onTabSelected: (index) {
         final next = HaloTab.values[index];
@@ -213,7 +200,6 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
       bottomAccessoryEnabled:
           session != null && MediaQuery.viewInsetsOf(context).bottom == 0,
       barHeight: HaloMetrics.tabBarHeight,
-      searchBarHeight: HaloMetrics.searchBarHeight,
       horizontalPadding: HaloMetrics.tabBarHorizontalPadding,
       verticalPadding: HaloMetrics.tabBarVerticalPadding,
       spacing: HaloMetrics.tabBarSpacing,
@@ -231,32 +217,6 @@ class _HaloChromeState extends State<HaloChrome> with WidgetsBindingObserver {
       settings: HaloGlass.tabBar(context),
       quality: HaloGlass.quality,
       interactionBehavior: GlassInteractionBehavior.full,
-      searchConfig: GlassSearchBarConfig(
-        focusNode: _searchFocusNode,
-        hintText: 'Search',
-        showsCancelButton: true,
-        textInputAction: TextInputAction.search,
-        searchIconColor: label,
-        onSearchToggle: (active) {
-          // Search is a tab body, so a page pushed over it would hide the
-          // results. Opening it returns to the root first.
-          if (active) _popToRoot();
-          controller.isSearching = active;
-        },
-        onChanged: (value) => controller.query = value,
-        onSearchFocusChanged: (focused) =>
-            controller.searchFieldFocused = focused,
-        // The × leaves search altogether. Without this the package only
-        // unfocuses, and search stays open behind a dropped keyboard.
-        onCancelTap: () => controller.isSearching = false,
-        // Collapsed, the tab capsule shows the active tab's glyph.
-        collapsedLogoBuilder: (context) => Center(
-          child: IconTheme(
-            data: IconThemeData(color: label, size: HaloMetrics.tabIconSize),
-            child: controller.tab.glyph,
-          ),
-        ),
-      ),
       tabs: [
         for (final tab in HaloTab.values)
           GlassTab(label: tab.title, icon: tab.glyph, activeIcon: tab.glyph),

@@ -15,9 +15,9 @@ void main() {
     expect(find.text('Activity'), findsOneWidget);
     expect(find.text('Move'), findsOneWidget);
 
-    await tester.tap(find.text('Sleep').last);
+    await tester.tap(find.text('Plans').last);
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Start Sleep'), findsOneWidget);
+    expect(find.text('Plans'), findsWidgets);
 
     await harness.tearDown(tester);
   });

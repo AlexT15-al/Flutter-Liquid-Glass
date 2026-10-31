@@ -14,6 +14,7 @@ import '../../../shared/widgets/large_title.dart';
 import '../../../shared/widgets/placeholder_page.dart';
 import '../../activity/presentation/activity_page.dart';
 import '../../sleep/presentation/night_page.dart';
+import '../../sleep/presentation/sleep_page.dart';
 import '../../sleep/presentation/widgets/hypnogram.dart';
 import '../../sleep/sleep_controller.dart';
 import '../domain/today_card.dart';
@@ -253,6 +254,7 @@ class _SleepTileState extends State<_SleepTile> {
 
   @override
   Widget build(BuildContext context) {
+    final sleep = SleepScope.of(context);
     return StreamBuilder<List<SleepNight>>(
       stream: _nights,
       initialData: const [],
@@ -261,17 +263,25 @@ class _SleepTileState extends State<_SleepTile> {
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         // Only a night that ended this morning or yesterday's is "last".
-        final night =
+        final recorded =
             nights.isNotEmpty &&
                 today.difference(nights.first.morning).inDays <= 1
             ? nights.first
             : null;
+        // Measured from the phone this morning and not yet recorded: shown
+        // as it is, for a tap to keep or change.
+        final detected = sleep.detected;
+        final night = detected?.toNight() ?? recorded;
         final asleep = night?.asleep;
         return MetricTile(
           title: widget.card.title,
           icon: widget.card.icon,
           color: widget.color,
-          caption: night == null ? null : nightTitle(night),
+          caption: detected != null
+              ? 'Measured · Tap to Record'
+              : night == null
+              ? null
+              : nightTitle(night),
           value: asleep == null || asleep.inMinutes == 0
               ? null
               : '${asleep.inHours}:'
@@ -280,11 +290,7 @@ class _SleepTileState extends State<_SleepTile> {
           chart: night == null || !night.hasStages
               ? null
               : Hypnogram(night: night, height: 34, axis: false, labels: false),
-          onTap: () => Navigator.of(context).push(
-            night == null
-                ? PlaceholderPage.route(widget.card.title)
-                : NightPage.route(night),
-          ),
+          onTap: () => Navigator.of(context).push(SleepPage.route()),
         );
       },
     );

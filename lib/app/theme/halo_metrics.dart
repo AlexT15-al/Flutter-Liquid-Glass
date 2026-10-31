@@ -53,7 +53,6 @@ abstract final class HaloMetrics {
   static const double tabBarHorizontalPadding = 20.0;
   static const double tabBarVerticalPadding = 16.0;
   static const double tabBarSpacing = 8.0;
-  static const double searchBarHeight = 50.0;
   static const double tabIconSize = 26.0;
   static const double tabLabelSize = 10.0;
   static const double tabIconLabelSpacing = 2.0;

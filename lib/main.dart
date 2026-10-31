@@ -46,6 +46,7 @@ Future<void> main() async {
   activity.attach(steps);
   final sleepController = SleepController(
     repository: SleepRepository(database),
+    preferences: preferences,
   );
   final workoutController = WorkoutController(
     repository: workouts,
@@ -68,7 +69,10 @@ Future<void> main() async {
 
   // A night left open (the app was closed while it tracked) is picked up or
   // closed. Not awaited: it is not on the first frame's path.
-  unawaited(sleepController.restore());
+  unawaited(sleepController.restore().then((_) => sleepController.detect()));
+  // Every time the app comes back, as Samsung Health does: last night is
+  // there the first time the phone is opened in the morning.
+  AppLifecycleListener(onResume: () => unawaited(sleepController.detect()));
 
   // Not awaited: checking access and opening the sensor must not hold the
   // first frame. It never prompts; asking is a button on Today.

@@ -2,17 +2,17 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_metrics.dart';
+import '../../../domain/phone_use.dart';
 import '../../../domain/sleep.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/glass_action_button.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
-import '../../../shared/widgets/large_title.dart';
+import '../../../shared/widgets/halo_page.dart';
 import '../sleep_controller.dart';
 import 'bedside_page.dart';
 import 'night_page.dart';
@@ -22,18 +22,23 @@ import 'widgets/hypnogram.dart';
 import 'widgets/score_ring.dart';
 import 'widgets/sleep_week_chart.dart';
 
-/// The Sleep tab: last night, tonight's plan and the button that starts it,
-/// and the week.
-class SleepTab extends StatefulWidget {
-  const SleepTab({super.key, required this.titleController});
+/// Sleep: last night and how it went, tonight's plan, and the week.
+///
+/// Opened from the Sleep card on Today and from Health. Last night comes
+/// first the Samsung way, from when the phone was last used and first
+/// unlocked; tracking a night on the mattress, which adds stages, comes
+/// after.
+class SleepPage extends StatefulWidget {
+  const SleepPage({super.key});
 
-  final GlassLargeTitleController titleController;
+  static Route<void> route() =>
+      CupertinoPageRoute<void>(builder: (_) => const SleepPage());
 
   @override
-  State<SleepTab> createState() => _SleepTabState();
+  State<SleepPage> createState() => _SleepPageState();
 }
 
-class _SleepTabState extends State<SleepTab> {
+class _SleepPageState extends State<SleepPage> {
   Stream<List<SleepNight>>? _nights;
   Stream<SleepSchedule>? _schedule;
 
@@ -57,103 +62,285 @@ class _SleepTabState extends State<SleepTab> {
     final controller = SleepScope.of(context);
     final now = DateTime.now();
 
-    return StreamBuilder<SleepSchedule>(
-      stream: _schedule,
-      initialData: const SleepSchedule(),
-      builder: (context, scheduleSnapshot) {
-        final schedule = scheduleSnapshot.data ?? const SleepSchedule();
-        return StreamBuilder<List<SleepNight>>(
-          stream: _nights,
-          initialData: const [],
-          builder: (context, snapshot) {
-            final nights = snapshot.data ?? const [];
-            final today = DateTime(now.year, now.month, now.day);
-            final last = nights.isEmpty ? null : nights.first;
-            final lastIsRecent =
-                last != null && today.difference(last.morning).inDays <= 1;
+    return HaloPage(
+      appBar: haloBar(context, title: 'Sleep'),
+      body: StreamBuilder<SleepSchedule>(
+        stream: _schedule,
+        initialData: const SleepSchedule(),
+        builder: (context, scheduleSnapshot) {
+          final schedule = scheduleSnapshot.data ?? const SleepSchedule();
+          return StreamBuilder<List<SleepNight>>(
+            stream: _nights,
+            initialData: const [],
+            builder: (context, snapshot) {
+              final nights = snapshot.data ?? const [];
+              final today = DateTime(now.year, now.month, now.day);
+              final last = nights.isEmpty ? null : nights.first;
+              final lastIsRecent =
+                  last != null && today.difference(last.morning).inDays <= 1;
+              final detected = controller.detected;
 
-            return CustomScrollView(
-              controller: widget.titleController.scrollController,
-              slivers: [
-                ...largeTitleSlivers(
-                  context,
-                  title: 'Sleep',
-                  controller: widget.titleController,
+              return ListView(
+                padding: EdgeInsets.fromLTRB(
+                  HaloMetrics.cardPadding,
+                  HaloMetrics.topInset(context),
+                  HaloMetrics.cardPadding,
+                  HaloMetrics.bottomInset(context),
                 ),
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    HaloMetrics.cardPadding,
-                    0,
-                    HaloMetrics.cardPadding,
-                    HaloMetrics.bottomInset(context),
-                  ),
-                  sliver: SliverList.list(
+                children: [
+                  if (controller.tracking)
+                    _TrackingCard(controller: controller)
+                  else if (detected != null)
+                    DetectedSleepCard(estimate: detected)
+                  else if (lastIsRecent)
+                    _LastNightCard(night: last, schedule: schedule)
+                  else
+                    const _FirstNightCard(),
+                  if (controller.usageAccess == false) ...[
+                    const SizedBox(height: HaloMetrics.cardGap),
+                    _UsageAccessCard(controller: controller),
+                  ],
+                  if (detected != null && lastIsRecent) ...[
+                    const SizedBox(height: HaloMetrics.cardGap),
+                    _LastNightCard(night: last, schedule: schedule),
+                  ],
+                  const _SectionTitle('Tonight'),
+                  GroupedCard(
                     children: [
-                      if (controller.tracking)
-                        _TrackingCard(controller: controller)
-                      else if (lastIsRecent)
-                        _LastNightCard(night: last, schedule: schedule)
-                      else
-                        const _FirstNightCard(),
-                      const _SectionTitle('Tonight'),
-                      GroupedCard(
-                        children: [
-                          GroupedRow(
-                            title: 'Bedtime',
-                            value: Format.minutesOfDay(schedule.bedtimeMinutes),
-                            onTap: () => showScheduleSheet(context, schedule),
-                          ),
-                          GroupedRow(
-                            title: 'Wake Up',
-                            value: Format.minutesOfDay(schedule.wakeMinutes),
-                            onTap: () => showScheduleSheet(context, schedule),
-                          ),
-                          GroupedRow(
-                            title: 'Sleep Goal',
-                            value: Format.durationWords(schedule.goal),
-                            onTap: () => showScheduleSheet(context, schedule),
-                          ),
-                        ],
+                      GroupedRow(
+                        title: 'Bedtime',
+                        value: Format.minutesOfDay(schedule.bedtimeMinutes),
+                        onTap: () => showScheduleSheet(context, schedule),
                       ),
-                      if (!controller.tracking) ...[
-                        const SizedBox(height: HaloMetrics.cardGap + 4),
-                        GlassActionButton(
-                          label: 'Start Sleep',
-                          icon: CupertinoIcons.moon_fill,
-                          tint: HaloColors.sleep.resolveFrom(context),
-                          ink: const Color(0xFFFFFFFF),
-                          onTap: _start,
-                        ),
-                        const GroupCaption(
-                          'Lay your phone on the mattress, near your pillow. '
-                          'Halo feels the night through it.',
-                          footer: true,
-                        ),
-                      ],
-                      const _SectionTitle('Last 7 Nights'),
-                      _WeekCard(nights: nights, schedule: schedule, now: now),
-                      const SizedBox(height: HaloMetrics.sectionTopGap),
-                      GroupedCard(
-                        children: [
-                          GroupedRow(
-                            title: 'All Nights',
-                            onTap: () =>
-                                Navigator.of(context).push(NightsPage.route()),
-                          ),
-                          GroupedRow(
-                            title: 'Add Sleep',
-                            onTap: () => showAddSleepSheet(context),
-                          ),
-                        ],
+                      GroupedRow(
+                        title: 'Wake Up',
+                        value: Format.minutesOfDay(schedule.wakeMinutes),
+                        onTap: () => showScheduleSheet(context, schedule),
+                      ),
+                      GroupedRow(
+                        title: 'Sleep Goal',
+                        value: Format.durationWords(schedule.goal),
+                        onTap: () => showScheduleSheet(context, schedule),
                       ),
                     ],
                   ),
-                ),
+                  const _SectionTitle('Last 7 Nights'),
+                  _WeekCard(nights: nights, schedule: schedule, now: now),
+                  const SizedBox(height: HaloMetrics.sectionTopGap),
+                  GroupedCard(
+                    children: [
+                      GroupedRow(
+                        title: 'All Nights',
+                        onTap: () =>
+                            Navigator.of(context).push(NightsPage.route()),
+                      ),
+                      GroupedRow(
+                        title: 'Add Sleep',
+                        onTap: () => showAddSleepSheet(context),
+                      ),
+                    ],
+                  ),
+                  if (!controller.tracking) ...[
+                    const _SectionTitle('Sleep Stages'),
+                    GlassActionButton(
+                      label: 'Track on the Mattress',
+                      icon: CupertinoIcons.moon_fill,
+                      tint: HaloColors.sleep.resolveFrom(context),
+                      ink: const Color(0xFFFFFFFF),
+                      onTap: _start,
+                    ),
+                    const GroupCaption(
+                      'For REM, light and deep sleep, start tracking at '
+                      'bedtime and lay the phone on the mattress near your '
+                      'pillow. Halo feels the night through it.',
+                      footer: true,
+                    ),
+                  ],
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Last night as the phone saw it, waiting to be kept: Record keeps it as it
+/// is, Edit changes the times first, as in Samsung Health.
+class DetectedSleepCard extends StatelessWidget {
+  const DetectedSleepCard({super.key, required this.estimate});
+
+  final SleepEstimate estimate;
+
+  Future<void> _record(BuildContext context, {bool edit = false}) async {
+    final controller = SleepScope.read(context);
+    final navigator = Navigator.of(context);
+    DateTime? from;
+    DateTime? to;
+    if (edit) {
+      final range = await showSleepTimesSheet(
+        context,
+        title: 'Edit Sleep',
+        start: estimate.start,
+        end: estimate.end,
+      );
+      if (range == null) return;
+      (from, to) = range;
+    }
+    HapticFeedback.mediumImpact();
+    final night = await controller.record(from: from, to: to);
+    if (night != null) navigator.push(NightPage.route(night));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final night = estimate.toNight();
+    final asleep = night.asleep;
+    final label = HaloColors.labelOf(context);
+    final secondary = HaloColors.secondaryLabelOf(context);
+    final number = TextStyle(
+      color: label,
+      fontSize: 34,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.6,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final unit = TextStyle(
+      color: secondary,
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+    );
+
+    return HaloCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _Eyebrow('Sleep Measured'),
+          const SizedBox(height: 8),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '${asleep.inHours}', style: number),
+                TextSpan(text: ' hr ', style: unit),
+                TextSpan(text: '${asleep.inMinutes % 60}', style: number),
+                TextSpan(text: ' min', style: unit),
               ],
-            );
-          },
-        );
-      },
+            ),
+          ),
+          Text(
+            '${Format.timeOfDay(estimate.start)} – '
+            '${Format.timeOfDay(estimate.end)}',
+            style: TextStyle(
+              color: secondary,
+              fontSize: 15,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'From when you last used your phone and first unlocked it.',
+            style: TextStyle(color: secondary, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: FilledCapsuleButton(
+                  label: 'Record',
+                  height: 44,
+                  onTap: () => _record(context),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _OutlineCapsule(
+                  label: 'Edit',
+                  onTap: () => _record(context, edit: true),
+                ),
+              ),
+            ],
+          ),
+          CupertinoButton(
+            padding: const EdgeInsets.only(top: 10),
+            minimumSize: Size.zero,
+            onPressed: () => SleepScope.read(context).dismiss(),
+            child: Text(
+              'I Wasn\'t Asleep',
+              style: TextStyle(
+                color: HaloColors.secondaryLabelOf(context),
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A secondary action beside a filled one: the same capsule, tinted fill.
+class _OutlineCapsule extends StatelessWidget {
+  const _OutlineCapsule({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return HaloCard(
+      onTap: onTap,
+      padding: EdgeInsets.zero,
+      color: HaloColors.fill.resolveFrom(context),
+      child: SizedBox(
+        height: 44,
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: HaloColors.labelOf(context),
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Asks for Usage Access, which is how Halo knows when the phone was last
+/// used at night and first unlocked in the morning.
+class _UsageAccessCard extends StatelessWidget {
+  const _UsageAccessCard({required this.controller});
+
+  final SleepController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return HaloCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _Eyebrow('Measure Sleep Automatically'),
+          const SizedBox(height: 6),
+          Text(
+            'Allow Usage Access and Halo works out each night from when you '
+            'last used your phone and first unlocked it in the morning. '
+            'Nothing runs at night, and nothing leaves the phone.',
+            style: TextStyle(
+              color: HaloColors.secondaryLabelOf(context),
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledCapsuleButton(
+            label: 'Allow Usage Access',
+            height: 44,
+            onTap: controller.requestUsageAccess,
+          ),
+        ],
+      ),
     );
   }
 }

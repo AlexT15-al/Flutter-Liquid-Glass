@@ -9,52 +9,12 @@ import 'halo_tab.dart';
 /// page can own it, so the root page and the chrome both read it from here.
 class HaloTabController extends ChangeNotifier {
   HaloTab _tab = HaloTab.today;
-  bool _isSearching = false;
-  bool _searchFieldFocused = false;
-  String _query = '';
 
   HaloTab get tab => _tab;
-
-  /// The search capsule is open.
-  bool get isSearching => _isSearching;
-
-  /// The search field has focus: distinct from [isSearching], which is true as
-  /// soon as the capsule opens, before anything is typed.
-  bool get searchFieldFocused => _searchFieldFocused;
-
-  /// What is in the search field. Search runs over local data, so every
-  /// keystroke can answer; there is nothing to throttle.
-  String get query => _query;
 
   set tab(HaloTab value) {
     if (_tab == value) return;
     _tab = value;
-    _isSearching = false;
-    _searchFieldFocused = false;
-    notifyListeners();
-  }
-
-  set isSearching(bool value) {
-    if (_isSearching == value) return;
-    _isSearching = value;
-    if (!value) {
-      _searchFieldFocused = false;
-      // Closing search discards the query, the way dismissing a search screen
-      // does on iOS.
-      _query = '';
-    }
-    notifyListeners();
-  }
-
-  set searchFieldFocused(bool value) {
-    if (_searchFieldFocused == value) return;
-    _searchFieldFocused = value;
-    notifyListeners();
-  }
-
-  set query(String value) {
-    if (_query == value) return;
-    _query = value;
     notifyListeners();
   }
 }

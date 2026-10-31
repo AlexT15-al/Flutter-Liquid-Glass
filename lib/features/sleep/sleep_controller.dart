@@ -4,12 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../data/preferences/halo_preferences.dart';
 import '../../data/sleep/sleep_repository.dart';
 import '../../data/sleep/sleep_sensor.dart';
+import '../../domain/phone_use.dart';
 import '../../domain/sleep.dart';
 import '../../platform/android_permissions.dart';
+import '../../platform/screen_history.dart';
 
-/// Tonight: whether the night is being tracked, and since when.
+/// Sleep as the phone sees it.
+///
+/// First, the Samsung way: every time the app opens, the night just gone is
+/// worked out from when the phone was last used and first unlocked
+/// ([detected]), offered to be recorded as it is or with the times changed.
+/// Second, for anyone who wants stages: a night tracked on the mattress,
+/// whether it is being tracked, and since when.
 ///
 /// The night lives in the database from the moment it starts, minute by
 /// minute, so a phone that restarts or an app that is closed in the night
@@ -18,12 +27,90 @@ class SleepController extends ChangeNotifier {
   SleepController({
     required this.repository,
     this._sensor = const SleepSensor(),
+    this._history = const ScreenHistory(),
+    this._preferences,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
 
   final SleepRepository repository;
   final SleepSensor _sensor;
+  final ScreenHistory _history;
+  final HaloPreferences? _preferences;
   final DateTime Function() _clock;
+
+  SleepEstimate? _detected;
+
+  /// Last night as the phone's use tells it, not yet recorded.
+  SleepEstimate? get detected => _detected;
+
+  bool? _usageAccess;
+
+  /// Whether Halo may read the screen history: null where there is none to
+  /// read (iOS), false until the user allows it.
+  bool? get usageAccess => _usageAccess;
+
+  /// Looks for last night in the phone's use. Run at launch and every time
+  /// the app comes back, so it is there the first time the phone is opened
+  /// in the morning.
+  Future<void> detect() async {
+    if (!_history.supported) {
+      _usageAccess = null;
+      return;
+    }
+    final access = await _history.hasAccess();
+    SleepEstimate? found;
+    if (access && !tracking) {
+      final now = _clock();
+      final morning = DateTime(now.year, now.month, now.day);
+      // From midday before, so the state of the screen at 18:00 is known.
+      final events = await _history.events(
+        morning.subtract(const Duration(hours: 12)),
+        now,
+      );
+      found = PhoneUseSleep.estimate(events, now);
+      if (found != null) {
+        final dismissed = await _preferences?.readDismissedSleep();
+        if (dismissed == found.start ||
+            await repository.overlaps(found.start, found.end)) {
+          found = null;
+        }
+      }
+    }
+    if (access == _usageAccess && found?.start == _detected?.start) return;
+    _usageAccess = access;
+    _detected = found;
+    notifyListeners();
+  }
+
+  /// Opens the Settings page where Usage Access is allowed.
+  Future<void> requestUsageAccess() => _history.requestAccess();
+
+  /// Keeps the detected night, between [from] and [to] if the user changed
+  /// the times.
+  Future<SleepNight?> record({DateTime? from, DateTime? to}) async {
+    final estimate = _detected;
+    if (estimate == null) return null;
+    final night = estimate.toNight(from: from, to: to);
+    final id = await repository.addNight(night);
+    _detected = null;
+    notifyListeners();
+    return SleepNight(
+      id: id,
+      source: night.source,
+      inBed: night.inBed,
+      outOfBed: night.outOfBed,
+      hypnogram: night.hypnogram,
+    );
+  }
+
+  /// It was not sleep: the phone was left somewhere. Not offered again.
+  Future<void> dismiss() async {
+    final estimate = _detected;
+    if (estimate == null) return;
+    _detected = null;
+    notifyListeners();
+    await _preferences?.setDismissedSleep(estimate.start);
+  }
 
   int? _sessionId;
   DateTime? _since;
