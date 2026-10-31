@@ -9,6 +9,7 @@ import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/large_title.dart';
+import 'records_page.dart';
 import 'workout_detail_page.dart';
 import 'workout_setup_sheet.dart';
 
@@ -115,6 +116,21 @@ class _WorkoutTabState extends State<WorkoutTab> {
                               context,
                             ).push(WorkoutDetailPage.route(workout)),
                           ),
+                      ],
+                    ),
+                    const SizedBox(height: HaloMetrics.cardGap),
+                    GroupedCard(
+                      children: [
+                        GroupedRow(
+                          leading: Icon(
+                            CupertinoIcons.rosette,
+                            size: 22,
+                            color: HaloColors.accent.resolveFrom(context),
+                          ),
+                          title: 'Personal Records',
+                          onTap: () =>
+                              Navigator.of(context).push(RecordsPage.route()),
+                        ),
                       ],
                     ),
                   ],

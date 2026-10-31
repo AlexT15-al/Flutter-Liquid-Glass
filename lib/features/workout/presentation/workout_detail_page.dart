@@ -11,6 +11,7 @@ import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
 import '../widgets/route_sections.dart';
+import 'share_workout_page.dart';
 
 /// One finished workout: when, how long, and what it added up to.
 class WorkoutDetailPage extends StatelessWidget {
@@ -98,6 +99,18 @@ class WorkoutDetailPage extends StatelessWidget {
         context,
         title: workout.type.title,
         actions: [
+          GlassBarItem.icon(
+            id: 'share',
+            label: 'Share',
+            background: GlassBarItemBackground.separate,
+            icon: Icon(
+              CupertinoIcons.square_arrow_up,
+              size: HaloMetrics.barButtonSize * HaloMetrics.barGlyphRatio,
+              color: HaloColors.labelOf(context),
+            ),
+            onTap: () =>
+                Navigator.of(context).push(ShareWorkoutPage.route(workout)),
+          ),
           GlassBarItem.icon(
             id: 'delete',
             label: 'Delete',

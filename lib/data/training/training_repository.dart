@@ -19,6 +19,21 @@ class TrainingRepository {
       ),
   ]);
 
+  /// Every set ever logged, for records.
+  Stream<List<SetLog>> watchAll() => _db
+      .watchSetsSince(DateTime.fromMillisecondsSinceEpoch(0))
+      .map(
+        (rows) => [
+          for (final r in rows)
+            SetLog(
+              time: DateTime.fromMillisecondsSinceEpoch(r.timeMs),
+              exerciseId: r.exerciseId,
+              reps: r.reps,
+              kg: r.kg,
+            ),
+        ],
+      );
+
   /// The last twelve weeks of sets: more than progression ever looks back.
   Stream<List<SetLog>> watchHistory() => _db
       .watchSetsSince(DateTime.now().subtract(const Duration(days: 84)))

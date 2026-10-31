@@ -35,6 +35,7 @@ class MainActivity : FlutterActivity() {
         ScreenHistoryChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
         WidgetChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
         files.attach(flutterEngine.dartExecutor.binaryMessenger)
+        ShareChannel(this).attach(flutterEngine.dartExecutor.binaryMessenger)
     }
 
     @Deprecated("Deprecated in Java")

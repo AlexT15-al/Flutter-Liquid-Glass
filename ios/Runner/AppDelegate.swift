@@ -26,6 +26,29 @@ import WidgetKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloFiles") {
       files.attach(to: registrar.messenger())
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloShare") {
+      FlutterMethodChannel(name: "halo/share", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { [weak self] call, result in
+          guard call.method == "image",
+            let args = call.arguments as? [String: Any],
+            let data = (args["png"] as? FlutterStandardTypedData)?.data,
+            let image = UIImage(data: data)
+          else {
+            result(FlutterMethodNotImplemented)
+            return
+          }
+          var items: [Any] = [image]
+          if let text = args["text"] as? String { items.append(text) }
+          let sheet = UIActivityViewController(activityItems: items, applicationActivities: nil)
+          guard let presenter = self?.files.topController() else {
+            result(false)
+            return
+          }
+          sheet.popoverPresentationController?.sourceView = presenter.view
+          presenter.present(sheet, animated: true)
+          result(true)
+        }
+    }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HaloWidget") {
       FlutterMethodChannel(name: "halo/widget", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { call, result in
@@ -310,6 +333,8 @@ final class FilesBridge: NSObject, UIDocumentPickerDelegate {
         }
       }
   }
+
+  func topController() -> UIViewController? { presenter() }
 
   private func presenter() -> UIViewController? {
     let scene = UIApplication.shared.connectedScenes
