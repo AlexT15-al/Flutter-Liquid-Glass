@@ -19,20 +19,33 @@ import io.flutter.plugin.common.MethodChannel
 import java.text.NumberFormat
 import java.util.Calendar
 
+/** The kinds of Halo widget on the home screen. */
+enum class WidgetStyle {
+    /** Rings with their numbers; the rings alone when narrow. */
+    FULL,
+
+    /** A pill: rings, Move, Exercise and Active Hours. */
+    RINGS_PILL,
+
+    /** A pill: rings, steps, energy and exercise minutes. */
+    STATS_PILL,
+
+    /** A pill: today's steps against the goal. */
+    STEPS_PILL,
+}
+
 /**
- * The home screen widget: today's three rings, and at the larger size their
- * numbers and the steps.
+ * The home screen widgets: today's rings and numbers in four shapes.
  *
  * The app writes a snapshot of the day whenever it changes ([WidgetChannel]);
- * the widget draws from that, so it costs nothing between updates. A
+ * the widgets draw from that, so they cost nothing between updates. A
  * snapshot from an earlier day reads as an empty day.
  */
 open class ActivityWidget : AppWidgetProvider() {
-    /** The compact pill whatever the size, for [ActivityWidgetCompact]. */
-    protected open val compact = false
+    protected open val style = WidgetStyle.FULL
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        for (id in ids) render(context, manager, id, compact)
+        for (id in ids) render(context, manager, id, style)
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -41,22 +54,26 @@ open class ActivityWidget : AppWidgetProvider() {
         id: Int,
         options: Bundle,
     ) {
-        render(context, manager, id, compact)
+        render(context, manager, id, style)
     }
 
     companion object {
         private const val PREFS = "halo_widget"
 
+        private val providers = listOf(
+            ActivityWidget::class.java to WidgetStyle.FULL,
+            ActivityWidgetCompact::class.java to WidgetStyle.RINGS_PILL,
+            ActivityWidgetStats::class.java to WidgetStyle.STATS_PILL,
+            ActivityWidgetSteps::class.java to WidgetStyle.STEPS_PILL,
+        )
+
         /** Redraws every Halo widget on the home screen. */
         fun refresh(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
-            for (id in manager.getAppWidgetIds(ComponentName(context, ActivityWidget::class.java))) {
-                render(context, manager, id, compact = false)
-            }
-            for (id in manager.getAppWidgetIds(
-                ComponentName(context, ActivityWidgetCompact::class.java),
-            )) {
-                render(context, manager, id, compact = true)
+            for ((provider, style) in providers) {
+                for (id in manager.getAppWidgetIds(ComponentName(context, provider))) {
+                    render(context, manager, id, style)
+                }
             }
         }
 
@@ -73,7 +90,7 @@ open class ActivityWidget : AppWidgetProvider() {
             context: Context,
             manager: AppWidgetManager,
             id: Int,
-            compact: Boolean,
+            style: WidgetStyle,
         ) {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val today = sameDay(prefs.getLong("updatedAt", 0L))
@@ -87,63 +104,92 @@ open class ActivityWidget : AppWidgetProvider() {
             val moveGoal = goal("moveGoal", 400f)
             val exerciseGoal = goal("exerciseGoal", 30f)
             val hoursGoal = goal("activeHoursGoal", 10f)
+            val stepsGoal = goal("stepsGoal", 10000f)
 
             val dark = (context.resources.configuration.uiMode and
                 Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
             val moveColor = Color.parseColor(if (dark) "#FA114F" else "#E5124A")
             val exerciseColor = Color.parseColor(if (dark) "#A6FF00" else "#4A8F00")
             val hoursColor = Color.parseColor(if (dark) "#1EEAEF" else "#0095A8")
+            val ringValues = listOf(
+                move / moveGoal to moveColor,
+                exercise / exerciseGoal to exerciseColor,
+                hours / hoursGoal to hoursColor,
+            )
 
-            val options = manager.getAppWidgetOptions(id)
-            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
-            val small = !compact && minWidth < 200
+            val minWidth = manager.getAppWidgetOptions(id)
+                .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
+            val small = style == WidgetStyle.FULL && minWidth < 200
+            val density = context.resources.displayMetrics.density
+            val number = NumberFormat.getIntegerInstance()
 
             val views = RemoteViews(
                 context.packageName,
-                when {
-                    compact -> R.layout.widget_activity_compact
-                    small -> R.layout.widget_activity_small
-                    else -> R.layout.widget_activity
+                when (style) {
+                    WidgetStyle.RINGS_PILL -> R.layout.widget_activity_compact
+                    WidgetStyle.STATS_PILL -> R.layout.widget_activity_stats
+                    WidgetStyle.STEPS_PILL -> R.layout.widget_steps
+                    WidgetStyle.FULL ->
+                        if (small) R.layout.widget_activity_small else R.layout.widget_activity
                 },
             )
-            val density = context.resources.displayMetrics.density
-            views.setImageViewBitmap(
-                R.id.widget_rings,
-                rings(
-                    (if (compact) 58 else if (small) 96 else 112) * density,
-                    listOf(
-                        move / moveGoal to moveColor,
-                        exercise / exerciseGoal to exerciseColor,
-                        hours / hoursGoal to hoursColor,
-                    ),
-                ),
-            )
-            val number = NumberFormat.getIntegerInstance()
-            if (compact) {
-                // Bare numbers beside their glyphs, as Samsung Health's own.
-                views.setTextViewText(R.id.widget_move, number.format(move.toLong()))
-                views.setTextViewText(R.id.widget_exercise, "${exercise.toInt()}")
-                views.setTextViewText(R.id.widget_hours, "${hours.toInt()}")
-            } else {
-                views.setTextViewText(R.id.widget_steps, "${number.format(steps.toLong())} steps")
+
+            when (style) {
+                WidgetStyle.STEPS_PILL -> {
+                    views.setTextViewText(R.id.widget_steps, number.format(steps.toLong()))
+                    views.setTextViewText(
+                        R.id.widget_steps_goal,
+                        "of ${number.format(stepsGoal.toLong())} steps",
+                    )
+                    views.setProgressBar(
+                        R.id.widget_steps_progress,
+                        1000,
+                        (steps / stepsGoal * 1000).toInt().coerceIn(0, 1000),
+                        false,
+                    )
+                }
+                WidgetStyle.STATS_PILL -> {
+                    views.setImageViewBitmap(R.id.widget_rings, rings(58 * density, ringValues))
+                    views.setTextViewText(R.id.widget_steps, number.format(steps.toLong()))
+                    views.setTextViewText(R.id.widget_move, number.format(move.toLong()))
+                    views.setTextViewText(R.id.widget_exercise, "${exercise.toInt()}")
+                }
+                WidgetStyle.RINGS_PILL -> {
+                    views.setImageViewBitmap(R.id.widget_rings, rings(58 * density, ringValues))
+                    // Bare numbers beside their glyphs, as Samsung Health's own.
+                    views.setTextViewText(R.id.widget_move, number.format(move.toLong()))
+                    views.setTextViewText(R.id.widget_exercise, "${exercise.toInt()}")
+                    views.setTextViewText(R.id.widget_hours, "${hours.toInt()}")
+                }
+                WidgetStyle.FULL -> {
+                    views.setImageViewBitmap(
+                        R.id.widget_rings,
+                        rings((if (small) 96 else 112) * density, ringValues),
+                    )
+                    views.setTextViewText(
+                        R.id.widget_steps,
+                        "${number.format(steps.toLong())} steps",
+                    )
+                    if (!small) {
+                        views.setTextViewText(
+                            R.id.widget_move,
+                            "${number.format(move.toLong())}/${number.format(moveGoal.toLong())} KCAL",
+                        )
+                        views.setTextColor(R.id.widget_move, moveColor)
+                        views.setTextViewText(
+                            R.id.widget_exercise,
+                            "${exercise.toInt()}/${exerciseGoal.toInt()} MIN",
+                        )
+                        views.setTextColor(R.id.widget_exercise, exerciseColor)
+                        views.setTextViewText(
+                            R.id.widget_hours,
+                            "${hours.toInt()}/${hoursGoal.toInt()} HRS",
+                        )
+                        views.setTextColor(R.id.widget_hours, hoursColor)
+                    }
+                }
             }
-            if (!small && !compact) {
-                views.setTextViewText(
-                    R.id.widget_move,
-                    "${number.format(move.toLong())}/${number.format(moveGoal.toLong())} KCAL",
-                )
-                views.setTextColor(R.id.widget_move, moveColor)
-                views.setTextViewText(
-                    R.id.widget_exercise,
-                    "${exercise.toInt()}/${exerciseGoal.toInt()} MIN",
-                )
-                views.setTextColor(R.id.widget_exercise, exerciseColor)
-                views.setTextViewText(
-                    R.id.widget_hours,
-                    "${hours.toInt()}/${hoursGoal.toInt()} HRS",
-                )
-                views.setTextColor(R.id.widget_hours, hoursColor)
-            }
+
             val open = PendingIntent.getActivity(
                 context,
                 10,
@@ -189,9 +235,19 @@ open class ActivityWidget : AppWidgetProvider() {
     }
 }
 
-/** The small pill-shaped widget: rings and three numbers in a row of two cells. */
+/** A pill of two cells: rings, Move, Exercise and Active Hours. */
 class ActivityWidgetCompact : ActivityWidget() {
-    override val compact = true
+    override val style = WidgetStyle.RINGS_PILL
+}
+
+/** A pill of two cells: rings, steps, energy and exercise minutes. */
+class ActivityWidgetStats : ActivityWidget() {
+    override val style = WidgetStyle.STATS_PILL
+}
+
+/** A pill of two cells: today's steps and how far to the goal. */
+class ActivityWidgetSteps : ActivityWidget() {
+    override val style = WidgetStyle.STEPS_PILL
 }
 
 /** `halo/widget`: the app hands the widget today's numbers. */

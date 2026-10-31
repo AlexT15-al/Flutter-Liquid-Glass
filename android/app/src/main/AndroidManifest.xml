@@ -79,6 +79,26 @@
                 android:resource="@xml/widget_activity_compact_info" />
         </receiver>
         <receiver
+            android:name=".ActivityWidgetStats"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_stats_info" />
+        </receiver>
+        <receiver
+            android:name=".ActivityWidgetSteps"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_steps_info" />
+        </receiver>
+        <receiver
             android:name=".WorkoutActionReceiver"
             android:exported="false" />
         <!-- Don't delete the meta-data below.

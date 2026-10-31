@@ -9,7 +9,9 @@
     <string name="widget_move">Move</string>
     <string name="widget_exercise">Exercise</string>
     <string name="widget_active_hours">Active Hours</string>
-    <string name="widget_compact_description">Today\'s rings, small.</string>
+    <string name="widget_compact_description">Rings, Move, Exercise and Active Hours.</string>
+    <string name="widget_stats_description">Rings, steps, energy and exercise minutes.</string>
+    <string name="widget_steps_description">Today\'s steps and the goal.</string>
 
     <style name="HaloWidgetCompactRow">
         <item name="android:layout_width">wrap_content</item>

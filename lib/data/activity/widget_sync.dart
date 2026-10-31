@@ -46,6 +46,7 @@ class WidgetSync {
       'activeHours': today.activeHours,
       'activeHoursGoal': goals.activeHours,
       'steps': today.steps,
+      'stepsGoal': goals.steps,
     };
   }
 
