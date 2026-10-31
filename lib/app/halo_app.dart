@@ -4,6 +4,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'shell/halo_chrome.dart';
 import 'shell/halo_tab_controller.dart';
 import 'shell/halo_tabs_root.dart';
+import 'shell/modal_route_observer.dart';
 import 'theme/halo_colors.dart';
 
 /// The root of the app.
@@ -27,8 +28,13 @@ class _HaloAppState extends State<HaloApp> {
   /// only handle on the Navigator: tapping a tab pops back to the root.
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
+  /// Tells the chrome when a sheet or dialog is up, so the tab bar can step
+  /// aside for it.
+  final ModalRouteObserver _routes = ModalRouteObserver();
+
   @override
   void dispose() {
+    _routes.modalOnTop.dispose();
     _tabs.dispose();
     super.dispose();
   }
@@ -42,6 +48,7 @@ class _HaloAppState extends State<HaloApp> {
         title: 'Halo',
         debugShowCheckedModeBanner: false,
         navigatorKey: _navigatorKey,
+        navigatorObservers: [_routes],
         // Null brightness follows the system. A stored Light / Dark / System
         // preference arrives with Settings.
         theme: const CupertinoThemeData(
@@ -54,6 +61,7 @@ class _HaloAppState extends State<HaloApp> {
         // sleep session) paint above the shell's hoisted bar buttons too.
         builder: (context, child) => HaloChrome(
           navigatorKey: _navigatorKey,
+          modalOnTop: _routes.modalOnTop,
           child: GlassNavigationShell(child: child!),
         ),
         home: const HaloTabsRoot(),

@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../features/today/presentation/edit_today_sheet.dart';
+import '../../features/today/presentation/today_tab.dart';
 import '../../shared/widgets/bar_items.dart';
 import '../../shared/widgets/halo_page.dart';
 import '../../shared/widgets/placeholder_page.dart';
@@ -32,6 +34,13 @@ class HaloTabsRoot extends StatelessWidget {
         // chevron that does nothing.
         backButton: false,
         actions: [
+          // Edit belongs to Today alone: it is the one tab whose content is
+          // the user's own arrangement.
+          if (controller.tab == HaloTab.today && !controller.isSearching)
+            editBarItem(
+              editing: false,
+              onTap: () => showEditTodaySheet(context),
+            ),
           accountBarItem(
             context,
             onProfile: () =>
@@ -77,6 +86,9 @@ class HaloTabsRoot extends StatelessWidget {
     }
 
     final tab = controller.tab;
+    if (tab == HaloTab.today) {
+      return const TodayTab(key: ValueKey(HaloTab.today));
+    }
     return TabPlaceholder(
       key: ValueKey(tab),
       icon: tab.glyph,

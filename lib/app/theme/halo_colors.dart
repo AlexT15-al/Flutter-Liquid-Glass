@@ -57,12 +57,21 @@ abstract final class HaloColors {
 
   // ── Activity rings ─────────────────────────────────────────────────────────
   //
-  // Fixed in both appearances: the rings are graphics, not text, and they are
-  // the same rings whether the page behind them is black or grey.
+  // The neon Fitness colours on black. On a light page the lime and the cyan
+  // all but vanish (1.2:1 and 1.5:1 on white), so the light appearance takes
+  // deeper shades of the same hues that clear 3.5:1 against both the card and
+  // the grouped background. They are used for the rings and for the numbers
+  // written in ring colours alike.
 
-  static const move = Color(0xFFFA114F);
-  static const exercise = Color(0xFFA6FF00);
-  static const activeHours = Color(0xFF1EEAEF);
+  static const move = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFFFA114F),
+    darkColor: Color(0xFFFA114F),
+  );
+  static const exercise = accent;
+  static const activeHours = CupertinoDynamicColor.withBrightness(
+    color: Color(0xFF0095A8),
+    darkColor: Color(0xFF1EEAEF),
+  );
 
   /// The unfilled track behind a ring: its own colour, faded.
   static Color ringTrack(Color ring) => ring.withValues(alpha: 0.22);

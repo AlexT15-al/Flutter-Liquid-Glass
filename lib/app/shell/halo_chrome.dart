@@ -1,11 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show ValueListenable, defaultTargetPlatform, TargetPlatform;
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../theme/halo_colors.dart';
 import '../theme/halo_glass.dart';
 import '../theme/halo_metrics.dart';
+import '../theme/halo_motion.dart';
 import 'halo_tab.dart';
 import 'halo_tab_controller.dart';
 
@@ -26,9 +27,18 @@ class HaloChrome extends StatefulWidget {
     super.key,
     required this.child,
     required this.navigatorKey,
+    required this.modalOnTop,
   });
 
   final Widget child;
+
+  /// True while a sheet or dialog is presented. The bar slides off the bottom
+  /// edge for it, the way a sheet covers the tab bar on iOS, and returns as
+  /// the sheet goes down.
+  ///
+  /// Slid rather than faded: glass under an `Opacity` cannot fade, its
+  /// backdrop pass renders fully or not at all.
+  final ValueListenable<bool> modalOnTop;
 
   /// This widget is built in `CupertinoApp.builder`, above the Navigator, so
   /// `Navigator.of(context)` finds nothing from here. Tapping a tab while a
@@ -106,9 +116,26 @@ class _HaloChromeState extends State<HaloChrome> {
             child: GlassIsolationScope(
               isolated: true,
               defaultQuality: HaloGlass.quality,
-              // The bar's indicator spring runs on its own; without a boundary
-              // every frame of it would mark the whole app dirty.
-              child: RepaintBoundary(child: _buildTabBar(context, controller)),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: widget.modalOnTop,
+                // The bar is built once and handed through, so presenting a
+                // sheet animates its position without rebuilding it.
+                builder: (context, covered, bar) => IgnorePointer(
+                  ignoring: covered,
+                  child: AnimatedSlide(
+                    offset: covered ? const Offset(0, 1.3) : Offset.zero,
+                    duration:
+                        HaloMotion.of(context, HaloMotion.standardDuration),
+                    curve: HaloMotion.standardCurve,
+                    child: bar,
+                  ),
+                ),
+                // The bar's indicator spring runs on its own; without a
+                // boundary every frame of it would mark the whole app dirty.
+                child: RepaintBoundary(
+                  child: _buildTabBar(context, controller),
+                ),
+              ),
             ),
           ),
         ),
