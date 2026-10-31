@@ -3,19 +3,19 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:pedometer/pedometer.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../domain/activity_summary.dart';
+import '../../platform/android_permissions.dart';
 import '../preferences/halo_preferences.dart';
 
 /// Whether the app may read the step counter.
 enum StepAccess {
-  /// Not asked yet, or still finding out.
+  /// Not granted, but the app can still ask.
   unknown,
   granted,
 
-  /// Refused. On Android a second refusal is permanent and only Settings can
-  /// undo it.
+  /// Refused for good: Android will not prompt again, so only the app's page
+  /// in Settings can turn it back on.
   denied,
 
   /// The phone has no step counter.
@@ -90,7 +90,8 @@ class StepTracker with WidgetsBindingObserver {
     _stored = await _preferences.readStepCounter();
 
     if (_requiresPermission) {
-      final status = await Permission.activityRecognition.status;
+      final status =
+          await AndroidPermissions.status(AndroidPermissions.activityRecognition);
       access.value = _accessFrom(status);
       if (access.value == StepAccess.granted) _listen();
     } else {
@@ -101,22 +102,29 @@ class StepTracker with WidgetsBindingObserver {
   /// Asks for access, from a button the user pressed.
   Future<void> requestAccess() async {
     if (_requiresPermission) {
-      final status = await Permission.activityRecognition.request();
+      final current =
+          await AndroidPermissions.status(AndroidPermissions.activityRecognition);
+      if (current == PermissionState.permanentlyDenied) {
+        // The prompt will not show again; Settings is the only way back.
+        await AndroidPermissions.openSettings();
+        return;
+      }
+      final status = await AndroidPermissions.request(
+        AndroidPermissions.activityRecognition,
+      );
       access.value = _accessFrom(status);
       if (access.value == StepAccess.granted) _listen();
-      if (status.isPermanentlyDenied) await openAppSettings();
     } else {
       _listen();
     }
   }
 
-  static StepAccess _accessFrom(PermissionStatus status) => switch (status) {
-        PermissionStatus.granted || PermissionStatus.limited => StepAccess.granted,
-        PermissionStatus.denied ||
-        PermissionStatus.permanentlyDenied ||
-        PermissionStatus.restricted =>
-          StepAccess.denied,
-        _ => StepAccess.unknown,
+  static StepAccess _accessFrom(PermissionState status) => switch (status) {
+        PermissionState.granted => StepAccess.granted,
+        // Never asked and refused look the same to Android; the card offers
+        // Allow either way, and a permanent refusal sends the tap to Settings.
+        PermissionState.denied => StepAccess.unknown,
+        PermissionState.permanentlyDenied => StepAccess.denied,
       };
 
   void _listen() {
