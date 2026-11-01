@@ -72,4 +72,15 @@ void main() {
     expect(entry.protein, item.protein * 1.5);
     expect(item.lenten, isTrue);
   });
+
+  test('BMI and its bands, as the WHO draws them', () {
+    expect(Bmi.of(80, 178), closeTo(25.2, 0.05));
+    expect(Bmi.category(18.4), BmiCategory.underweight);
+    expect(Bmi.category(18.5), BmiCategory.healthy);
+    expect(Bmi.category(24.99), BmiCategory.healthy);
+    expect(Bmi.category(25), BmiCategory.overweight);
+    expect(Bmi.category(30), BmiCategory.obese);
+    // 18.5 × 1.78² = 58.6, 25 × 1.78² = 79.2.
+    expect(Bmi.healthyRange(178), (59, 79));
+  });
 }

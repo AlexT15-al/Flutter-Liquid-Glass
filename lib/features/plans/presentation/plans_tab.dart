@@ -565,8 +565,8 @@ class _PlannedMealCardState extends State<_PlannedMealCard> {
             ),
           ),
           _IconCircle(
-            icon: CupertinoIcons.arrow_2_squarepath,
-            color: secondary,
+            icon: CupertinoIcons.arrow_2_circlepath,
+            color: HaloColors.labelOf(context),
             label: 'Swap',
             onTap: widget.onSwap,
           ),

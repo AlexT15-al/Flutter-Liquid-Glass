@@ -11,6 +11,7 @@ import '../../../app/theme/halo_motion.dart';
 import '../../../domain/body_profile.dart';
 import '../../../domain/nutrition.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/bmi_gauge.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/large_title.dart';
@@ -606,6 +607,10 @@ class _WeightCard extends StatelessWidget {
           title: 'Target',
           value: target == null ? 'Not Set' : '${Format.decimal(target)} kg',
           onTap: () => showWeightGoalSheet(context, profile, goal),
+        ),
+        BmiRow(
+          bmi: profile.bmi,
+          target: target == null ? null : Bmi.of(target, profile.heightCm),
         ),
         if (target != null && weeks != null && weeks > 0)
           GroupedRow(

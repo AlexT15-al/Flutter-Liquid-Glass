@@ -11,6 +11,7 @@ import '../../../data/preferences/halo_preferences.dart';
 import '../../../domain/avatar_preset.dart';
 import '../../../domain/body_profile.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/bmi_gauge.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_page.dart';
 import '../../../shared/widgets/profile_avatar.dart';
@@ -108,11 +109,15 @@ class _ProfilePageState extends State<ProfilePage> {
                       onChanged: (kg) => save(profile.copyWith(weightKg: kg)),
                     ),
                   ),
+                  BmiRow(bmi: profile.bmi),
                 ],
               ),
-              const GroupCaption(
+              GroupCaption(
                 'Halo uses these to estimate distance and energy from your '
-                'steps, and later your heart-rate zones.',
+                'steps, and to set your calories and protein. A healthy '
+                'weight for ${profile.heightCm.round()} cm is '
+                '${healthyRangeText(profile.heightCm)}. BMI cannot tell muscle '
+                'from fat, so with a lot of muscle it reads high.',
                 footer: true,
               ),
             ],

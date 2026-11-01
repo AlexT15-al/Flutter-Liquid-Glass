@@ -9,6 +9,7 @@ import '../../../app/theme/halo_metrics.dart';
 import '../../../domain/body_profile.dart';
 import '../../../domain/nutrition.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/bmi_gauge.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_sheet.dart';
@@ -267,6 +268,10 @@ class _GoalSheetState extends State<_GoalSheet> {
         GroupedCard(
           children: [
             GroupedRow(title: 'Goal', value: what),
+            BmiRow(
+              bmi: widget.profile.bmi,
+              target: Bmi.of(_target, widget.profile.heightCm),
+            ),
             GroupedRow(
               title: 'Pace',
               value: '${Format.decimal(_pace.kgPerWeek)} kg a week',
@@ -279,7 +284,16 @@ class _GoalSheetState extends State<_GoalSheet> {
             ),
           ],
         ),
-        const GroupCaption(
+        if (Bmi.of(_target, widget.profile.heightCm) < BmiCategory.healthy.from)
+          GroupCaption(
+            'This target is below a healthy weight for your height '
+            '(${healthyRangeText(widget.profile.heightCm)}). Aim within the '
+            'range, or talk to a doctor first.',
+            footer: true,
+          ),
+        GroupCaption(
+          'A healthy weight for ${widget.profile.heightCm.round()} cm is '
+          '${healthyRangeText(widget.profile.heightCm)}. '
           'Calories are worked out from your profile; half of what the rings '
           'measure is added each day as you move, since without a heart rate '
           'it is an estimate. Protein is 1.6 g per kg, or 1.8 g per kg of '

@@ -39,6 +39,9 @@ class BodyProfile {
     return heightCm / 100 * factor;
   }
 
+  /// Body mass index: kilograms over metres squared.
+  double get bmi => Bmi.of(weightKg, heightCm);
+
   /// Age in whole years on [today], or null without a birth date.
   int? ageOn(DateTime today) {
     final born = birthDate;
@@ -107,3 +110,42 @@ class BodyProfile {
 }
 
 enum BiologicalSex { female, male, unspecified }
+
+/// The WHO's adult bands of body mass index.
+enum BmiCategory {
+  underweight('Underweight', 0, 18.5),
+  healthy('Healthy Weight', 18.5, 25),
+  overweight('Overweight', 25, 30),
+  obese('Obesity', 30, double.infinity);
+
+  const BmiCategory(this.title, this.from, this.to);
+
+  final String title;
+  final double from;
+  final double to;
+}
+
+/// Body mass index, and what it says and does not.
+///
+/// A screening number from height and weight alone: it cannot tell muscle
+/// from fat, so a strong, lean person can read as overweight. A guide to a
+/// sensible target weight, not a verdict.
+abstract final class Bmi {
+  static double of(double kg, double heightCm) {
+    final m = heightCm / 100;
+    return m <= 0 ? 0 : kg / (m * m);
+  }
+
+  static BmiCategory category(double bmi) =>
+      BmiCategory.values.lastWhere((c) => bmi >= c.from);
+
+  /// The weights in the healthy band for a height, rounded inwards to the
+  /// kilogram.
+  static (int, int) healthyRange(double heightCm) {
+    final m2 = (heightCm / 100) * (heightCm / 100);
+    return (
+      (BmiCategory.healthy.from * m2).ceil(),
+      (BmiCategory.healthy.to * m2 - 0.05).floor(),
+    );
+  }
+}
