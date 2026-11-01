@@ -4,11 +4,13 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_metrics.dart';
+import '../../../domain/intervals.dart';
 import '../../../domain/workout.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/large_title.dart';
+import 'custom_workout_sheet.dart';
 import 'records_page.dart';
 import 'workout_detail_page.dart';
 import 'workout_setup_sheet.dart';
@@ -28,6 +30,7 @@ class WorkoutTab extends StatefulWidget {
 class _WorkoutTabState extends State<WorkoutTab> {
   Stream<List<WorkoutRecord>>? _week;
   Stream<List<WorkoutRecord>>? _recent;
+  Stream<List<CustomWorkout>>? _custom;
 
   @override
   void didChangeDependencies() {
@@ -41,6 +44,7 @@ class _WorkoutTabState extends State<WorkoutTab> {
       DateTime(monday.year, monday.month, monday.day + 7),
     );
     _recent ??= repository.watchRecent(5);
+    _custom ??= HaloScope.preferencesOf(context).watchCustomWorkouts();
   }
 
   @override
@@ -95,6 +99,19 @@ class _WorkoutTabState extends State<WorkoutTab> {
             horizontal: HaloMetrics.cardPadding,
           ),
           sliver: SliverToBoxAdapter(
+            child: StreamBuilder<List<CustomWorkout>>(
+              stream: _custom,
+              initialData: const [],
+              builder: (context, snapshot) =>
+                  _CustomSection(workouts: snapshot.data ?? const []),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: HaloMetrics.cardPadding,
+          ),
+          sliver: SliverToBoxAdapter(
             child: StreamBuilder<List<WorkoutRecord>>(
               stream: _recent,
               initialData: const [],
@@ -142,6 +159,53 @@ class _WorkoutTabState extends State<WorkoutTab> {
         SliverToBoxAdapter(
           child: SizedBox(height: HaloMetrics.bottomInset(context)),
         ),
+      ],
+    );
+  }
+}
+
+/// The user's own interval workouts, and a way to make one.
+class _CustomSection extends StatelessWidget {
+  const _CustomSection({required this.workouts});
+
+  final List<CustomWorkout> workouts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Custom Workouts'),
+        GroupedCard(
+          children: [
+            for (final workout in workouts)
+              GroupedRow(
+                leading: _TypeBadge(type: workout.type, size: 32),
+                title: workout.name,
+                value: Format.durationWords(workout.estimate()),
+                onTap: () => showCustomWorkoutStart(context, workout),
+              ),
+            GroupedRow(
+              leading: SizedBox(
+                width: 32,
+                child: Icon(
+                  CupertinoIcons.plus_circle_fill,
+                  size: 26,
+                  color: HaloColors.accent.resolveFrom(context),
+                ),
+              ),
+              title: 'Create Workout',
+              onTap: () => showCustomWorkoutBuilder(context),
+            ),
+          ],
+        ),
+        if (workouts.isEmpty)
+          const GroupCaption(
+            'Intervals of your own: a warm-up, work and recovery repeated, '
+            'a cool-down. Each step is timed or measured, and the phone taps '
+            'twice when the next begins.',
+            footer: true,
+          ),
       ],
     );
   }

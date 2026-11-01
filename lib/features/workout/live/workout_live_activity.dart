@@ -104,7 +104,9 @@ class WorkoutLiveActivity {
     }
     if (state.quiet) return;
     final due = now.difference(_shownAt!) >= minInterval;
-    if (state.paused != shown.paused || (due && !state.looksLike(shown))) {
+    if (state.paused != shown.paused ||
+        state.goal != shown.goal ||
+        (due && !state.looksLike(shown))) {
       _shown = state;
       _shownAt = now;
       unawaited(_platform.update(state));
@@ -122,7 +124,11 @@ class WorkoutLiveActivity {
         ? session.currentPace ?? session.pace
         : session.pace;
     final hasDistance = type.hasDistance && km > 0;
-    final progress = session.goalProgress;
+    final intervals = session.intervals;
+    final segment = intervals?.current;
+    final progress = intervals != null
+        ? intervals.progress
+        : session.goalProgress;
     return LiveActivityState(
       title: type.title,
       symbol: symbolOf(type),
@@ -137,7 +143,13 @@ class WorkoutLiveActivity {
           ? '${SplitsCard.kmh(pace).toStringAsFixed(1)} km/h'
           : '${Format.pace(pace)} /km',
       progress: progress?.clamp(0.0, 1.0),
-      goal: session.goal.kind == WorkoutGoalKind.open
+      // A custom workout shows the interval under way, which changes only
+      // when the next one starts, so the update goes out straight away.
+      goal: intervals != null
+          ? segment == null
+                ? 'Complete'
+                : '${segment.label} · ${segment.step.describe}'
+          : session.goal.kind == WorkoutGoalKind.open
           ? null
           : session.goal.describe,
       gps: session.followsGps,

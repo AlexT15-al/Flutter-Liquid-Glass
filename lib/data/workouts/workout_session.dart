@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/body_profile.dart';
+import '../../domain/intervals.dart';
 import '../../domain/route.dart';
 import '../location/location_tracker.dart';
 import '../../domain/workout.dart';
@@ -30,15 +31,25 @@ class WorkoutSession extends ChangeNotifier {
     required ValueListenable<int?> stepCounter,
     Stream<RoutePoint>? locations,
     this.locationAccess,
+    CustomWorkout? custom,
     DateTime Function()? clock,
   }) : _counter = stepCounter,
-       _clock = clock ?? DateTime.now {
+       _clock = clock ?? DateTime.now,
+       intervals = custom == null ? null : IntervalTracker(custom) {
     _counter.addListener(_onSteps);
     _locations = locations?.listen(_onFix);
   }
 
   final WorkoutType type;
   final WorkoutGoal goal;
+
+  /// For a custom workout, where it is in its intervals.
+  final IntervalTracker? intervals;
+
+  /// Counts the segments started, so a listener can tell when a new one
+  /// begins and give the cue.
+  int get segmentChanges => _segmentChanges;
+  int _segmentChanges = 0;
 
   /// For an outdoor workout, whether GPS could be used; null indoors.
   final LocationAccess? locationAccess;
@@ -201,7 +212,27 @@ class WorkoutSession extends ChangeNotifier {
 
   void _startTicking() {
     _timer?.cancel();
-    _timer = Timer.periodic(_tick, (_) => notifyListeners());
+    _timer = Timer.periodic(_tick, (_) {
+      _advance();
+      notifyListeners();
+    });
+  }
+
+  /// Moves the intervals on with the clock and the distance.
+  void _advance() {
+    final tracker = intervals;
+    if (tracker == null || _phase != SessionPhase.running) return;
+    if (tracker.update(elapsed, distanceKm)) _segmentChanges++;
+  }
+
+  /// Ends the interval under way now and starts the next.
+  void skipSegment() {
+    final tracker = intervals;
+    if (tracker == null || tracker.done) return;
+    tracker.update(elapsed, distanceKm);
+    tracker.skip();
+    _segmentChanges++;
+    notifyListeners();
   }
 
   void _onFix(RoutePoint fix) {
@@ -219,6 +250,7 @@ class WorkoutSession extends ChangeNotifier {
       _routeM += step;
     }
     _route.add(stamped);
+    _advance();
     notifyListeners();
   }
 

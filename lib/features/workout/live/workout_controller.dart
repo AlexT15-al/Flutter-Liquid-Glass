@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../data/location/location_tracker.dart';
 import '../../../data/workouts/workout_repository.dart';
 import '../../../data/workouts/workout_session.dart';
 import '../../../domain/body_profile.dart';
+import '../../../domain/intervals.dart';
 import '../../../domain/route.dart';
 import '../../../domain/workout.dart';
 
@@ -43,6 +45,19 @@ class WorkoutController extends ChangeNotifier {
 
   Timer? _countdown;
 
+  /// Segments of a custom workout cued so far.
+  int _segments = 0;
+
+  /// A new interval: two firm taps, felt through a pocket or an armband,
+  /// whether the workout is on screen or not.
+  void _onSession() {
+    final session = _session;
+    if (session == null || session.segmentChanges == _segments) return;
+    _segments = session.segmentChanges;
+    HapticFeedback.heavyImpact();
+    Timer(const Duration(milliseconds: 180), HapticFeedback.heavyImpact);
+  }
+
   /// Starts a workout: the countdown first, then the clock.
   ///
   /// Outdoors it asks for location first, and starts listening straight away
@@ -52,6 +67,7 @@ class WorkoutController extends ChangeNotifier {
     required WorkoutType type,
     required WorkoutGoal goal,
     required BodyProfile profile,
+    CustomWorkout? custom,
   }) async {
     if (_session != null) return;
     final location = _location;
@@ -70,9 +86,12 @@ class WorkoutController extends ChangeNotifier {
       stepCounter: _counter,
       locations: fixes,
       locationAccess: access,
+      custom: custom,
       clock: _clock,
     );
     _session = session;
+    _segments = 0;
+    session.addListener(_onSession);
     _expanded = true;
     _countdown = Timer(WorkoutSession.countdownLength, session.begin);
     notifyListeners();
@@ -114,6 +133,7 @@ class WorkoutController extends ChangeNotifier {
   void _clear() {
     _countdown?.cancel();
     final session = _session;
+    session?.removeListener(_onSession);
     _session = null;
     _expanded = false;
     notifyListeners();

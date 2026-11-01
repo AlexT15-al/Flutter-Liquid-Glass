@@ -16,6 +16,8 @@ import '../../../domain/route.dart';
 import '../../../domain/workout.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/halo_card.dart';
+import '../../../shared/widgets/progress_bar.dart';
+import '../presentation/custom_workout_sheet.dart' show stepColor;
 import '../widgets/route_map.dart';
 import '../widgets/route_sections.dart';
 import 'workout_controller.dart';
@@ -361,7 +363,7 @@ class _Live extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 Text(
-                  session.type.title,
+                  session.intervals?.workout.name ?? session.type.title,
                   style: TextStyle(
                     color: HaloColors.labelOf(context),
                     fontSize: HaloMetrics.barTitleSize,
@@ -474,6 +476,10 @@ class _Readout extends StatelessWidget {
         if (progress != null) ...[
           const SizedBox(height: 8),
           _GoalBar(progress: progress, label: session.goal.describe),
+        ],
+        if (session.intervals != null) ...[
+          const SizedBox(height: 16),
+          IntervalCard(session: session),
         ],
         const SizedBox(height: 28),
         _Metrics(session: session),
@@ -639,6 +645,150 @@ class _LiveMap extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A custom workout's step under way: what it is, what is left of it, and
+/// what comes next.
+class IntervalCard extends StatelessWidget {
+  const IntervalCard({super.key, required this.session});
+
+  final WorkoutSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final tracker = session.intervals!;
+    final segment = tracker.current;
+    final next = tracker.next;
+    final label = HaloColors.labelOf(context);
+    final secondary = HaloColors.secondaryLabelOf(context);
+    if (segment == null) {
+      return HaloCard(
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.checkmark_seal_fill,
+              color: HaloColors.accent.resolveFrom(context),
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Every step done. End when you are ready.',
+                style: TextStyle(color: label, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final color = stepColor(context, segment.step.kind);
+    final left = tracker.timeLeft;
+    final metres = tracker.metresLeft;
+    final remaining = left != null
+        ? Format.clock(Duration(seconds: (left.inMilliseconds / 1000).ceil()))
+        : metres! >= 1000
+        ? '${(metres / 1000).toStringAsFixed(2)} km'
+        : '$metres m';
+
+    return HaloCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  segment.label.toUpperCase(),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              Text(
+                '${tracker.index + 1}/${tracker.segments.length}',
+                style: TextStyle(
+                  color: secondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  remaining,
+                  style: TextStyle(
+                    color: label,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.8,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              Semantics(
+                button: true,
+                label: 'Next step',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    session.skipSegment();
+                  },
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    margin: const EdgeInsets.only(bottom: 6),
+                    alignment: Alignment.center,
+                    decoration: ShapeDecoration(
+                      color: HaloColors.fill.resolveFrom(context),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Skip',
+                          style: TextStyle(
+                            color: label,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          CupertinoIcons.forward_end_fill,
+                          size: 13,
+                          color: label,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ProgressBar(value: tracker.progress, color: color),
+          if (next != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Next: ${next.label} · ${next.step.describe}',
+              style: TextStyle(color: secondary, fontSize: 14),
+            ),
+          ],
+        ],
       ),
     );
   }

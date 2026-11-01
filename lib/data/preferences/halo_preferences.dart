@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../domain/intervals.dart';
 import '../../domain/activity_goals.dart';
 import '../../domain/app_theme_mode.dart';
 import '../../domain/body_profile.dart';
@@ -32,6 +33,7 @@ class HaloPreferences {
   static const _weightGoalKey = 'weight_goal';
   static const _trainingKey = 'training_profile';
   static const _mealPlanKey = 'meal_plan';
+  static const _customWorkoutsKey = 'custom_workouts';
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
@@ -220,6 +222,46 @@ class HaloPreferences {
       'cards': [for (final card in cards) card.name],
       'known': [for (final card in TodayCard.values) card.name],
     }),
+  );
+
+  // ── Custom workouts ────────────────────────────────────────────────────────
+
+  /// The user's own interval workouts, newest first.
+  Stream<List<CustomWorkout>> watchCustomWorkouts() =>
+      _db.watchValue(_customWorkoutsKey).map(_customWorkouts);
+
+  static List<CustomWorkout> _customWorkouts(String? raw) {
+    if (raw == null) return const [];
+    return [
+      for (final w in jsonDecode(raw) as List)
+        CustomWorkout.fromJson((w as Map).cast()),
+    ];
+  }
+
+  /// Adds [workout], or replaces the one with its id.
+  Future<void> saveCustomWorkout(CustomWorkout workout) async {
+    final all = _customWorkouts(await _db.readValue(_customWorkoutsKey));
+    final index = all.indexWhere((w) => w.id == workout.id);
+    final next = [...all];
+    if (index >= 0) {
+      next[index] = workout;
+    } else {
+      next.insert(0, workout);
+    }
+    await _writeCustomWorkouts(next);
+  }
+
+  Future<void> deleteCustomWorkout(int id) async {
+    final all = _customWorkouts(await _db.readValue(_customWorkoutsKey));
+    await _writeCustomWorkouts([
+      for (final w in all)
+        if (w.id != id) w,
+    ]);
+  }
+
+  Future<void> _writeCustomWorkouts(List<CustomWorkout> all) => _db.writeValue(
+    _customWorkoutsKey,
+    jsonEncode([for (final w in all) w.toJson()]),
   );
 
   // ── Step counter ───────────────────────────────────────────────────────────
