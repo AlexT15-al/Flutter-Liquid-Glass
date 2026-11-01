@@ -1,10 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../domain/app_theme_mode.dart';
+import '../features/mindfulness/breathe_page.dart';
+import '../features/nutrition/presentation/water_page.dart';
+import '../features/sleep/presentation/sleep_page.dart';
+import '../features/today/presentation/steps_page.dart';
+import '../features/today/presentation/weekly_page.dart';
 import '../features/workout/live/workout_controller.dart';
+import '../platform/notifications.dart';
 import 'halo_scope.dart';
 import 'shell/halo_chrome.dart';
+import 'shell/halo_tab.dart';
 import 'shell/halo_tab_controller.dart';
 import 'shell/halo_tabs_root.dart';
 import 'shell/modal_route_observer.dart';
@@ -44,14 +53,47 @@ class _HaloAppState extends State<HaloApp> {
   /// rebuild.
   Stream<AppThemeMode>? _themeMode;
 
+  StreamSubscription<String>? _reminderTaps;
+
+  @override
+  void initState() {
+    super.initState();
+    // A tap on a reminder: while the app runs, and the one that launched it.
+    _reminderTaps = Reminders.opens.listen(_open);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final route = await const Reminders().launchRoute();
+      if (route != null) _open(route);
+    });
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _themeMode ??= HaloScope.preferencesOf(context).watchThemeMode();
   }
 
+  /// Opens what a reminder is about: its tab, and the page on top of it.
+  void _open(String route) {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+    navigator.popUntil((r) => r.isFirst);
+    final (tab, page) = switch (route) {
+      'sleep' => (HaloTab.today, SleepPage.route()),
+      'steps' => (HaloTab.today, StepsPage.route()),
+      'weekly' => (HaloTab.today, WeeklyPage.route()),
+      'water' => (HaloTab.today, WaterPage.route()),
+      'breathe' => (HaloTab.today, BreathePage.route()),
+      'training' => (HaloTab.plans, null),
+      'weight' || 'nutrition' => (HaloTab.nutrition, null),
+      _ => (HaloTab.today, null),
+    };
+    _tabs.tab = tab;
+    if (page != null) unawaited(navigator.push(page));
+  }
+
   @override
   void dispose() {
+    _reminderTaps?.cancel();
     _routes.modalOnTop.dispose();
     _tabs.dispose();
     super.dispose();

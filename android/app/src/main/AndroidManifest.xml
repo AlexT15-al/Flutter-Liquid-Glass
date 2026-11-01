@@ -15,6 +15,11 @@
          lock screen card and, on One UI 8, the Now Bar. -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Reminders: alarms at their minute, put back after a restart. Exact
+         alarms are the user's to allow; without them Android may hold a
+         reminder back a few minutes. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Sleep the way Samsung Health measures it without a watch: when the
          phone was last used at night and first unlocked in the morning, read
          from the system's usage history. Granted by the user in Settings. -->
@@ -101,6 +106,18 @@
         <receiver
             android:name=".WorkoutActionReceiver"
             android:exported="false" />
+        <!-- Reminders: the alarms themselves, and putting them back after a
+             restart, an update or a change of clock. -->
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

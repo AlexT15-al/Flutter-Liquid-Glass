@@ -13,6 +13,7 @@ import 'data/activity/widget_sync.dart';
 import 'data/database/app_database.dart';
 import 'data/location/location_tracker.dart';
 import 'data/mindfulness/mindfulness_repository.dart';
+import 'data/notifications/notification_sync.dart';
 import 'data/nutrition/nutrition_repository.dart';
 import 'data/preferences/halo_preferences.dart';
 import 'data/sleep/sleep_repository.dart';
@@ -22,6 +23,7 @@ import 'features/sleep/sleep_controller.dart';
 import 'features/workout/live/workout_controller.dart';
 import 'features/workout/live/workout_live_activity.dart';
 import 'platform/haptics.dart';
+import 'platform/notifications.dart';
 
 Future<void> main() async {
   // Flutter's binding, with the gate that turns haptics off when asked.
@@ -68,6 +70,22 @@ Future<void> main() async {
   // The home screen widget follows today's rings.
   WidgetSync(activity).attach();
 
+  // Reminders: planned a week ahead and checked by the phone at their time.
+  final nutrition = NutritionRepository(database);
+  final training = TrainingRepository(database);
+  final mindfulness = MindfulnessRepository(database);
+  Reminders.listen();
+  NotificationSync(
+    database: database,
+    preferences: preferences,
+    activity: activity,
+    steps: steps,
+    workouts: workouts,
+    nutrition: nutrition,
+    training: training,
+    mindfulness: mindfulness,
+  ).attach();
+
   // The workout on the lock screen, the status bar and the Now Bar.
   WorkoutLiveActivity(
     controller: workoutController,
@@ -93,9 +111,9 @@ Future<void> main() async {
       activity: activity,
       steps: steps,
       workouts: workouts,
-      nutrition: NutritionRepository(database),
-      training: TrainingRepository(database),
-      mindfulness: MindfulnessRepository(database),
+      nutrition: nutrition,
+      training: training,
+      mindfulness: mindfulness,
       child: LiquidGlassWidgets.wrap(
         // The iOS 27 material, premium in both appearances. Brightness is
         // resolved at each glass widget's own context, so the variants follow

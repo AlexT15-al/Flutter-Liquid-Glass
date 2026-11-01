@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -36,6 +37,13 @@ class MainActivity : FlutterActivity() {
         WidgetChannel.attach(this, flutterEngine.dartExecutor.binaryMessenger)
         files.attach(flutterEngine.dartExecutor.binaryMessenger)
         ShareChannel(this).attach(flutterEngine.dartExecutor.binaryMessenger)
+        Reminders.attach(this, flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    /** Opened from a reminder: the app asks where to once it has drawn. */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Reminders.onLaunch(intent)
     }
 
     @Deprecated("Deprecated in Java")
@@ -48,6 +56,7 @@ class MainActivity : FlutterActivity() {
     /** A tap on the live workout notification: bring the workout up. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (Reminders.onNewIntent(intent)) return
         when (intent.action) {
             WorkoutNotification.ACTION_OPEN -> LiveActivityChannel.send("open", null)
             SleepService.ACTION_OPEN -> SleepChannel.open()

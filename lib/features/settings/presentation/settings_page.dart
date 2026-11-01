@@ -19,6 +19,7 @@ import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
 import '../../goals/presentation/goals_page.dart';
 import '../../profile/presentation/profile_page.dart';
+import 'notifications_page.dart';
 
 /// Settings, reached from the account menu.
 class SettingsPage extends StatelessWidget {
@@ -49,6 +50,17 @@ class SettingsPage extends StatelessWidget {
                 title: 'Haptic Feedback',
                 watch: preferences.watchHaptics,
                 set: preferences.setHaptics,
+              ),
+            ],
+          ),
+          const SizedBox(height: HaloMetrics.sectionTopGap),
+          const GroupCaption('Notifications'),
+          GroupedCard(
+            children: [
+              GroupedRow(
+                title: 'Notifications',
+                onTap: () =>
+                    Navigator.of(context).push(NotificationsPage.route()),
               ),
             ],
           ),

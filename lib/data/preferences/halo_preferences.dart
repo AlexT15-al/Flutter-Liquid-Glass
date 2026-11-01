@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../domain/notifications.dart';
 import '../../domain/intervals.dart';
 import '../../domain/activity_goals.dart';
 import '../../domain/app_theme_mode.dart';
@@ -34,6 +35,7 @@ class HaloPreferences {
   static const _trainingKey = 'training_profile';
   static const _mealPlanKey = 'meal_plan';
   static const _customWorkoutsKey = 'custom_workouts';
+  static const _notificationsKey = 'notifications';
 
   // ── Appearance ─────────────────────────────────────────────────────────────
 
@@ -223,6 +225,19 @@ class HaloPreferences {
       'known': [for (final card in TodayCard.values) card.name],
     }),
   );
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+
+  Stream<NotificationSettings> watchNotifications() => _db
+      .watchValue(_notificationsKey)
+      .map(
+        (raw) => raw == null
+            ? const NotificationSettings()
+            : NotificationSettings.fromJson(_decode(raw)),
+      );
+
+  Future<void> setNotifications(NotificationSettings settings) =>
+      _db.writeValue(_notificationsKey, jsonEncode(settings.toJson()));
 
   // ── Custom workouts ────────────────────────────────────────────────────────
 
