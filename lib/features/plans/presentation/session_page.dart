@@ -10,6 +10,7 @@ import '../../../shared/format.dart';
 import '../../../shared/widgets/glass_action_button.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
+import 'rest_timer.dart';
 
 /// A planned session: what to do, and, once started, every set ticked off
 /// with its reps and load. Saved, the sets drive next time's plan, and the
@@ -45,8 +46,53 @@ class _SessionPageState extends State<SessionPage> {
       [for (var i = 0; i < e.sets; i++) _Set(reps: e.min, kg: e.kg)],
   ];
 
+  /// The rest under way: when it ends, how long it was, and what is next.
+  DateTime? _restEnd;
+  Duration _restTotal = Duration.zero;
+  String _restNext = '';
+
   int get _doneCount =>
       _sets.fold(0, (t, sets) => t + sets.where((s) => s.done).length);
+
+  /// A set was ticked off: rest before the next one, if there is one.
+  void _setDone(int exercise) {
+    final next = _nextSet();
+    if (next == null) {
+      setState(() => _restEnd = null);
+      return;
+    }
+    final (index, set) = next;
+    // Rest for the exercise just finished: the heavy lift needs it, not the
+    // one that comes after.
+    final rest = widget.session.exercises[exercise].exercise.rest;
+    setState(() {
+      _restTotal = rest;
+      _restEnd = DateTime.now().add(rest);
+      _restNext =
+          'Set ${set + 1} · ${widget.session.exercises[index].exercise.name}';
+    });
+  }
+
+  /// The first set not yet done, in order.
+  (int, int)? _nextSet() {
+    for (var i = 0; i < _sets.length; i++) {
+      for (var j = 0; j < _sets[i].length; j++) {
+        if (!_sets[i][j].done) return (i, j);
+      }
+    }
+    return null;
+  }
+
+  void _adjustRest(int seconds) {
+    final end = _restEnd;
+    if (end == null) return;
+    final moved = end.add(Duration(seconds: seconds));
+    final now = DateTime.now();
+    setState(() {
+      _restEnd = moved.isBefore(now) ? now : moved;
+      if (seconds > 0) _restTotal += Duration(seconds: seconds);
+    });
+  }
 
   void _start() {
     HapticFeedback.mediumImpact();
@@ -100,48 +146,85 @@ class _SessionPageState extends State<SessionPage> {
   Widget build(BuildContext context) {
     final session = widget.session;
     final logging = _started != null;
+    final restEnd = _restEnd;
+    final bottom = HaloMetrics.bottomInset(context);
+
+    final list = ListView(
+      padding: EdgeInsets.fromLTRB(
+        HaloMetrics.cardPadding,
+        HaloMetrics.topInset(context),
+        HaloMetrics.cardPadding,
+        bottom + (restEnd == null ? 0 : RestTimer.height + 12),
+      ),
+      children: [
+        Text(
+          '${Format.relativeDay(widget.date)} · ${session.exercises.length} '
+          'exercises · about ${Format.durationWords(session.length)}',
+          style: TextStyle(
+            color: HaloColors.secondaryLabelOf(context),
+            fontSize: 15,
+          ),
+        ),
+        const SizedBox(height: HaloMetrics.cardGap),
+        for (var i = 0; i < session.exercises.length; i++) ...[
+          _ExerciseCard(
+            planned: session.exercises[i],
+            sets: _sets[i],
+            logging: logging,
+            onChanged: () => setState(() {}),
+            onDone: () => _setDone(i),
+          ),
+          const SizedBox(height: HaloMetrics.cardGap),
+        ],
+        const SizedBox(height: HaloMetrics.cardGap),
+        if (!logging)
+          GlassActionButton(
+            label: 'Start Session',
+            icon: CupertinoIcons.play_fill,
+            onTap: _start,
+          )
+        else
+          GlassActionButton(
+            label: _doneCount == 0 ? 'Finish' : 'Finish · $_doneCount sets',
+            icon: CupertinoIcons.checkmark_alt,
+            onTap: _finish,
+          ),
+      ],
+    );
 
     return HaloPage(
       appBar: haloBar(context, title: session.title),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          HaloMetrics.cardPadding,
-          HaloMetrics.topInset(context),
-          HaloMetrics.cardPadding,
-          HaloMetrics.bottomInset(context),
-        ),
+      body: Stack(
         children: [
-          Text(
-            '${Format.relativeDay(widget.date)} · ${session.exercises.length} '
-            'exercises · about ${Format.durationWords(session.length)}',
-            style: TextStyle(
-              color: HaloColors.secondaryLabelOf(context),
-              fontSize: 15,
+          Positioned.fill(child: list),
+          Positioned(
+            left: HaloMetrics.cardPadding,
+            right: HaloMetrics.cardPadding,
+            // Just above the tab bar.
+            bottom: bottom - 8,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOutBack,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween(begin: 0.9, end: 1.0).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: restEnd == null
+                  ? const SizedBox.shrink()
+                  : RestTimer(
+                      key: const ValueKey('rest'),
+                      end: restEnd,
+                      total: _restTotal,
+                      next: _restNext,
+                      onAdjust: _adjustRest,
+                      onDone: () => setState(() => _restEnd = null),
+                    ),
             ),
           ),
-          const SizedBox(height: HaloMetrics.cardGap),
-          for (var i = 0; i < session.exercises.length; i++) ...[
-            _ExerciseCard(
-              planned: session.exercises[i],
-              sets: _sets[i],
-              logging: logging,
-              onChanged: () => setState(() {}),
-            ),
-            const SizedBox(height: HaloMetrics.cardGap),
-          ],
-          const SizedBox(height: HaloMetrics.cardGap),
-          if (!logging)
-            GlassActionButton(
-              label: 'Start Session',
-              icon: CupertinoIcons.play_fill,
-              onTap: _start,
-            )
-          else
-            GlassActionButton(
-              label: _doneCount == 0 ? 'Finish' : 'Finish · $_doneCount sets',
-              icon: CupertinoIcons.checkmark_alt,
-              onTap: _finish,
-            ),
         ],
       ),
     );
@@ -154,12 +237,16 @@ class _ExerciseCard extends StatelessWidget {
     required this.sets,
     required this.logging,
     required this.onChanged,
+    required this.onDone,
   });
 
   final PlannedExercise planned;
   final List<_Set> sets;
   final bool logging;
   final VoidCallback onChanged;
+
+  /// A set was ticked off.
+  final VoidCallback onDone;
 
   @override
   Widget build(BuildContext context) {
@@ -225,6 +312,7 @@ class _ExerciseCard extends StatelessWidget {
                     ? 5
                     : 2.5,
                 onChanged: onChanged,
+                onDone: onDone,
               ),
           ],
         ],
@@ -242,6 +330,7 @@ class _SetRow extends StatelessWidget {
     required this.step,
     required this.kgStep,
     required this.onChanged,
+    required this.onDone,
   });
 
   final int index;
@@ -250,6 +339,7 @@ class _SetRow extends StatelessWidget {
   final int step;
   final double kgStep;
   final VoidCallback onChanged;
+  final VoidCallback onDone;
 
   @override
   Widget build(BuildContext context) {
@@ -310,6 +400,7 @@ class _SetRow extends StatelessWidget {
               HapticFeedback.mediumImpact();
               set.done = !set.done;
               onChanged();
+              if (set.done) onDone();
             },
             child: Container(
               width: 40,

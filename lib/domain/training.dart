@@ -142,6 +142,24 @@ class Exercise {
   final String cue;
 
   bool get loaded => ratio > 0;
+
+  /// How long to rest between sets: longest after heavy legs and hips, a
+  /// little less after the big upper-body lifts, shortest for small muscles
+  /// and the core, and less at home, where the loads are lighter.
+  Duration get rest {
+    final seconds = switch (pattern) {
+      Pattern.squat || Pattern.hinge => loaded ? 150 : 75,
+      Pattern.pushHorizontal ||
+      Pattern.pushVertical ||
+      Pattern.pullHorizontal ||
+      Pattern.pullVertical ||
+      Pattern.lunge => loaded ? 105 : 60,
+      Pattern.arms || Pattern.legs => loaded ? 75 : 45,
+      Pattern.core => 45,
+      Pattern.conditioning => 30,
+    };
+    return Duration(seconds: seconds);
+  }
 }
 
 /// Every exercise the planner can choose from.
