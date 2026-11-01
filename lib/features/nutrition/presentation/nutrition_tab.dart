@@ -190,7 +190,8 @@ class _CaloriesCard extends StatelessWidget {
     double sum(double? Function(FoodEntry) of) =>
         food.fold(0, (total, e) => total + (of(e) ?? 0));
     final eaten = sum((e) => e.kcal);
-    final budget = targets.kcal + exercise;
+    final budget = targets.budget(exercise);
+    final earned = exercise * NutritionTargets.exerciseShare;
     final left = budget - eaten;
     final color = HaloColors.nutrition.resolveFrom(context);
     final secondary = HaloColors.secondaryLabelOf(context);
@@ -279,7 +280,7 @@ class _CaloriesCard extends StatelessWidget {
                     line('Food', '− ${Format.integer(eaten)}'),
                     line(
                       'Exercise',
-                      '+ ${Format.integer(exercise)}',
+                      '+ ${Format.integer(earned)}',
                       valueColor: HaloColors.move.resolveFrom(context),
                     ),
                   ],

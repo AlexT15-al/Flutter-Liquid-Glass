@@ -117,6 +117,28 @@ void main() {
       expect(day.map((m) => m.meal), Meal.values);
     });
 
+    test('a losing week reaches its protein, a day at a time', () {
+      final losing = NutritionTargets.of(
+        body,
+        WeightGoal(targetKg: body.weightKg - 8),
+        today: today,
+      );
+      var total = 0.0;
+      for (var d = 0; d < 28; d++) {
+        final day = MealPlanner.day(
+          today.add(Duration(days: d)),
+          losing,
+          const MealPlanSettings(),
+        );
+        final protein = day.fold<double>(0, (t, m) => t + m.protein);
+        final kcal = day.fold<double>(0, (t, m) => t + m.kcal);
+        expect(protein, greaterThan(losing.protein * 0.85));
+        expect(kcal, closeTo(losing.kcal, losing.kcal * 0.12));
+        total += protein;
+      }
+      expect(total / 28, greaterThanOrEqualTo(losing.protein * 0.95));
+    });
+
     test('fasting days plan only lenten food', () {
       const settings = MealPlanSettings(fastingWeekdays: {3, 5});
       final wednesday = today.add(const Duration(days: 2));

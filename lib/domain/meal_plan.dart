@@ -79,11 +79,18 @@ class PlannedMeal {
   double get protein => item.protein * portions;
 }
 
-/// A day of meals that adds up to the day's calories.
+/// A day of meals that adds up to the day's calories and protein.
 ///
 /// The day's energy is split 25% breakfast, 35% lunch, 30% dinner and 10%
 /// snacks. Each meal is a dish from the catalogue that suits it, sized in
 /// quarter portions to its share; fasting days choose only lenten dishes.
+///
+/// Protein is planned too, meal by meal: each meal is chosen from the dishes
+/// that, at that size, bring its share of what the day still needs, so a
+/// light breakfast is made up at lunch, and the snack closes whatever gap is
+/// left (a shake, yoghurt, edamame). Where too few dishes reach it, the ones
+/// that come closest.
+///
 /// The choice is fixed for a date (the same plan every time it is opened)
 /// but differs from the day before, and a swap moves to the next dish.
 abstract final class MealPlanner {
@@ -100,16 +107,37 @@ abstract final class MealPlanner {
     MealPlanSettings settings,
   ) {
     final fasting = settings.fasting(date);
-    return [
-      for (final meal in Meal.values)
-        _pick(date, meal, targets.kcal * shares[meal]!, fasting, settings),
-    ];
+    final planned = <PlannedMeal>[];
+    var protein = 0.0;
+    var shareLeft = 1.0;
+    for (final meal in Meal.values) {
+      final share = shares[meal]!;
+      // This meal's part of the protein still to come.
+      final need = (targets.protein - protein) * share / shareLeft;
+      final pick = _pick(
+        date,
+        meal,
+        targets.kcal * share,
+        need,
+        fasting,
+        settings,
+      );
+      planned.add(pick);
+      protein += pick.protein;
+      shareLeft -= share;
+    }
+    return planned;
   }
+
+  /// Quarter portions to [kcal], within half to double a portion.
+  static double _portions(double kcal, FoodItem item) =>
+      (((kcal / item.kcal) * 4).round() / 4).clamp(0.5, 2.0);
 
   static PlannedMeal _pick(
     DateTime date,
     Meal meal,
     double kcal,
+    double protein,
     bool fasting,
     MealPlanSettings settings,
   ) {
@@ -131,6 +159,16 @@ abstract final class MealPlanner {
               ))
               .take(4)
               .toList();
+    double proteinOf(FoodItem f) => f.protein * _portions(kcal, f);
+    // Those that bring enough protein; at least three to choose between, the
+    // richest in protein when not enough do.
+    var pool = options.where((f) => proteinOf(f) >= protein * 0.85).toList();
+    if (pool.length < 3) {
+      pool =
+          ([...options]..sort((a, b) => proteinOf(b).compareTo(proteinOf(a))))
+              .take(math.min(3, options.length))
+              .toList();
+    }
     // Days since a fixed Monday: consecutive days land on different dishes.
     final dayNumber = DateTime.utc(
       date.year,
@@ -139,13 +177,8 @@ abstract final class MealPlanner {
     ).difference(DateTime.utc(2024, 1, 1)).inDays;
     final index =
         (dayNumber * 7 + meal.index * 3 + settings.rerollsOf(date, meal)) %
-        options.length;
-    final item = options[index];
-    final portions = ((kcal / item.kcal) * 4).round() / 4;
-    return PlannedMeal(
-      meal: meal,
-      item: item,
-      portions: portions.clamp(0.5, 2.0),
-    );
+        pool.length;
+    final item = pool[index];
+    return PlannedMeal(meal: meal, item: item, portions: _portions(kcal, item));
   }
 }

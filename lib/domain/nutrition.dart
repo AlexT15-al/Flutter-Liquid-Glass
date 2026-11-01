@@ -115,13 +115,15 @@ class NutritionTargets {
   ///
   /// - Resting energy by Mifflin–St Jeor, times 1.35 for an ordinary day on
   ///   the feet; the activity the rings measure is added on top as the day
-  ///   goes, rather than guessed here.
+  ///   goes, rather than guessed here, but only [exerciseShare] of it (see
+  ///   [budget]).
   /// - A kilogram of body fat is about 7,700 kcal, so half a kilogram a week
   ///   is 550 kcal a day less (or more, to gain).
   /// - Never below 1,200 kcal (1,500 for men), which is where under-eating
   ///   starts to cost muscle and health.
-  /// - Protein 1.6 g per kg, 2.0 g while losing to keep muscle; fat 27% of
-  ///   the energy; carbohydrate the rest.
+  /// - Protein 1.6 g per kg; while losing, 1.8 g per kg of the target
+  ///   weight, to keep muscle; at most 35% of the energy. Fat 27% of the
+  ///   energy; carbohydrate the rest.
   /// - Water 33 ml per kg, to the nearest glass.
   static NutritionTargets of(
     BodyProfile profile,
@@ -152,7 +154,13 @@ class NutritionTargets {
     };
     final kcal = math.max(floor, maintenance + delta);
     final losing = delta < 0;
-    final protein = kg * (losing ? 2.0 : 1.6);
+    // While losing, more protein keeps the muscle, counted on the weight
+    // being aimed for: what the fat weighs needs none. Never more than 35%
+    // of the energy, which is past what helps.
+    final protein = math.min(
+      losing ? 1.8 * math.min(kg, target!) : 1.6 * kg,
+      kcal * 0.35 / 4,
+    );
     final fat = kcal * 0.27 / 9;
     final carbs = math.max(0.0, (kcal - protein * 4 - fat * 9) / 4);
     final water = (kg * 33 / 250).round() * 250;
@@ -166,6 +174,18 @@ class NutritionTargets {
       maintenance: (maintenance / 10).round() * 10,
     );
   }
+
+  /// The share of the day's measured activity that is added to the food
+  /// budget.
+  ///
+  /// Half, for two reasons. The 1.35 above already counts the walking of an
+  /// ordinary day, which the rings count again. And without a heart rate the
+  /// rings' energy is an estimate that runs high more often than low; eating
+  /// it all back is the usual reason a diet stalls.
+  static const exerciseShare = 0.5;
+
+  /// The day's calories to eat: the target and half the activity so far.
+  int budget(double activeKcal) => (kcal + activeKcal * exerciseShare).round();
 
   /// Weeks to the target at its pace, if there is one to reach.
   static int? weeksTo(BodyProfile profile, WeightGoal goal) {

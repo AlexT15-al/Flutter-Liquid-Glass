@@ -280,8 +280,10 @@ class _GoalSheetState extends State<_GoalSheet> {
           ],
         ),
         const GroupCaption(
-          'Calories are worked out from your profile, and what the rings '
-          'measure is added each day as you move. Plans follow this target.',
+          'Calories are worked out from your profile; half of what the rings '
+          'measure is added each day as you move, since without a heart rate '
+          'it is an estimate. Protein is 1.6 g per kg, or 1.8 g per kg of '
+          'your target weight while losing. Plans follow this target.',
           footer: true,
         ),
         const SizedBox(height: HaloMetrics.sheetBottomPadding),

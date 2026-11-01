@@ -27,8 +27,15 @@ void main() {
       today: today,
     );
     expect(t.kcal, closeTo(t.maintenance - 550, 10));
-    expect(t.protein, 170);
+    // 1.8 g for each kilogram of the 78 aimed for.
+    expect(t.protein, 140);
     expect(NutritionTargets.weeksTo(man, const WeightGoal(targetKg: 78)), 14);
+  });
+
+  test('half the measured activity goes into the budget', () {
+    final t = NutritionTargets.of(man, const WeightGoal(), today: today);
+    expect(t.budget(0), t.kcal);
+    expect(t.budget(400), t.kcal + 200);
   });
 
   test('never below the floor, and gaining is held to a gentle pace', () {

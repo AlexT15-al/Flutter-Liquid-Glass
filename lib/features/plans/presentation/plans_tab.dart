@@ -237,8 +237,8 @@ class _PlansTabState extends State<PlansTab> {
         ],
       ),
       const GroupCaption(
-        'Meals are sized to your daily calories, which follow your target '
-        'weight. On fasting days, and every day of Lent, only lenten dishes '
+        'Meals are sized to your daily calories and chosen to reach your '
+        'protein, both following your target weight. On fasting days, and every day of Lent, only lenten dishes '
         'are planned. Swap any meal you do not fancy; tap + to log it.',
         footer: true,
       ),
