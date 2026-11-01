@@ -24,7 +24,7 @@
     <!-- Map tiles. Debug builds add this on their own; release builds do not. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="halo"
+        android:label="Halo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
