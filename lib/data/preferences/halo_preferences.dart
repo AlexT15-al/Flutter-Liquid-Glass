@@ -172,17 +172,54 @@ class HaloPreferences {
 
   /// The cards on Today, in order. Unknown names from a newer build are
   /// skipped rather than failing the whole list.
+  /// The cards the user chose, in their order.
+  ///
+  /// Stored with the names of every card there was when it was saved, so a
+  /// card added in a later version shows up once, in its default place,
+  /// without bringing back one the user took away.
   Stream<List<TodayCard>> watchTodayCards() =>
       _db.watchValue(_todayCardsKey).map((raw) {
         if (raw == null) return TodayCard.defaults;
-        final names = (jsonDecode(raw) as List<dynamic>).cast<String>();
+        final json = jsonDecode(raw);
         final byName = TodayCard.values.asNameMap();
-        return [for (final name in names) ?byName[name]];
+        final List<String> names;
+        final Set<String> known;
+        if (json is Map) {
+          names = (json['cards'] as List).cast<String>();
+          known = (json['known'] as List).cast<String>().toSet();
+        } else {
+          // Saved before the list kept what it knew: everything up to the
+          // weekly review.
+          names = (json as List).cast<String>();
+          known = {
+            for (final c in TodayCard.values)
+              if (c != TodayCard.week) c.name,
+          };
+        }
+        final cards = [for (final name in names) ?byName[name]];
+        for (final card in TodayCard.defaults) {
+          if (known.contains(card.name) || cards.contains(card)) continue;
+          // After the default card before it, if the user kept that one.
+          final at = TodayCard.defaults.indexOf(card);
+          var index = 0;
+          for (var i = at - 1; i >= 0; i--) {
+            final found = cards.indexOf(TodayCard.defaults[i]);
+            if (found >= 0) {
+              index = found + 1;
+              break;
+            }
+          }
+          cards.insert(index, card);
+        }
+        return cards;
       });
 
   Future<void> setTodayCards(List<TodayCard> cards) => _db.writeValue(
     _todayCardsKey,
-    jsonEncode([for (final card in cards) card.name]),
+    jsonEncode({
+      'cards': [for (final card in cards) card.name],
+      'known': [for (final card in TodayCard.values) card.name],
+    }),
   );
 
   // ── Step counter ───────────────────────────────────────────────────────────

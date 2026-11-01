@@ -24,6 +24,7 @@ import '../../sleep/presentation/widgets/hypnogram.dart';
 import '../../sleep/sleep_controller.dart';
 import '../domain/today_card.dart';
 import 'steps_page.dart';
+import 'weekly_page.dart';
 import 'widgets/activity_card.dart';
 import 'widgets/metric_tile.dart';
 import 'widgets/readiness_card.dart';
@@ -193,6 +194,7 @@ class _TodayTabState extends State<TodayTab> {
 
     return switch (card) {
       TodayCard.readiness => const ReadinessCard(),
+      TodayCard.week => const WeeklyCard(),
       TodayCard.steps => MetricTile(
         title: card.title,
         icon: card.icon,

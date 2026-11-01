@@ -149,7 +149,7 @@ class _CardGlyph extends StatelessWidget {
       child: Icon(
         card.icon,
         size: 17,
-        color: card == TodayCard.readiness
+        color: card.color == HaloColors.accent
             ? HaloColors.onAccent.resolveFrom(context)
             : const Color(0xFFFFFFFF),
       ),
