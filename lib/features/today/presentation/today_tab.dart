@@ -17,6 +17,7 @@ import '../../../shared/widgets/hourly_bars.dart';
 import '../../../shared/widgets/large_title.dart';
 import '../../activity/presentation/activity_page.dart';
 import '../../mindfulness/mindfulness_page.dart';
+import '../../nutrition/presentation/nutrition_day_page.dart';
 import '../../nutrition/presentation/water_page.dart';
 import '../../sleep/presentation/night_page.dart';
 import '../../sleep/presentation/sleep_page.dart';
@@ -393,6 +394,7 @@ class _NutritionTileState extends State<_NutritionTile> {
             caption: 'Eaten Today',
             value: food.isEmpty ? null : Format.integer(kcal),
             unit: 'kcal',
+            onTap: () => Navigator.of(context).push(NutritionDayPage.route()),
           );
         },
       ),

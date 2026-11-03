@@ -24,7 +24,17 @@ class DayBars extends StatefulWidget {
     this.height = 120,
     this.onSelect,
     this.dot,
+    this.initial = 0,
+    this.goalIsTarget = true,
   });
+
+  /// Whether reaching the goal is the point (steps), or it is a limit
+  /// (calories eaten): only a target is marked as met.
+  final bool goalIsTarget;
+
+  /// The day selected at first, in days back from [lastDay]; scrolled into
+  /// view.
+  final int initial;
 
   /// A dot over each day's bar, as for a day's mood; null for a day without
   /// one, drawn as an empty dot.
@@ -55,7 +65,15 @@ class DayBars extends StatefulWidget {
 
 class _DayBarsState extends State<DayBars> {
   /// Days back from [DayBars.lastDay]: 0 is the last day.
-  int _selected = 0;
+  late int _selected = widget.initial.clamp(0, 1 << 20);
+
+  ScrollController? _scroll;
+
+  @override
+  void dispose() {
+    _scroll?.dispose();
+    super.dispose();
+  }
 
   DateTime _dayAt(int back) => DateTime(
     widget.lastDay.year,
@@ -111,7 +129,9 @@ class _DayBarsState extends State<DayBars> {
                 ),
               ),
             ),
-            if (goal != null && selectedValue >= goal) ...[
+            if (widget.goalIsTarget &&
+                goal != null &&
+                selectedValue >= goal) ...[
               const SizedBox(width: 6),
               Icon(
                 CupertinoIcons.checkmark_seal_fill,
@@ -125,6 +145,13 @@ class _DayBarsState extends State<DayBars> {
         LayoutBuilder(
           builder: (context, constraints) {
             final slot = constraints.maxWidth / widget.visible;
+            // First layout: the selected day in the middle, if it is not in
+            // the last week anyway.
+            _scroll ??= ScrollController(
+              initialScrollOffset: _selected < widget.visible
+                  ? 0
+                  : (_selected - widget.visible / 2 + 0.5) * slot,
+            );
             return SizedBox(
               height: widget.height + 22 + (widget.dot == null ? 0 : 18),
               child: ListView.builder(
@@ -132,6 +159,7 @@ class _DayBarsState extends State<DayBars> {
                 // Today at the right edge, earlier days swiped in from the
                 // left.
                 reverse: true,
+                controller: _scroll,
                 itemExtent: slot,
                 itemCount: values.length,
                 physics: const BouncingScrollPhysics(),
@@ -139,7 +167,8 @@ class _DayBarsState extends State<DayBars> {
                   final value = values[values.length - 1 - back];
                   final date = _dayAt(back);
                   final selected = back == _selected;
-                  final met = goal != null && value >= goal;
+                  final met =
+                      widget.goalIsTarget && goal != null && value >= goal;
                   return Semantics(
                     button: true,
                     selected: selected,

@@ -74,9 +74,12 @@ class _Choice {
 
 /// Adds a food to [meal]: searched from the catalogue or recent foods, or
 /// typed in, with calories if known, a rough size if not, or none at all.
+///
+/// On another [day], the food is logged on it, at the meal's usual time.
 Future<void> showAddFoodSheet(
   BuildContext context, {
   required Meal meal,
+  DateTime? day,
 }) async {
   final nutrition = HaloScope.nutritionOf(context);
   final recent = await nutrition.recent();
@@ -86,7 +89,30 @@ Future<void> showAddFoodSheet(
     builder: (context, scroll) =>
         _AddFoodSheet(controller: scroll, meal: meal, recent: recent),
   );
-  if (entry != null) await nutrition.addFood(entry);
+  if (entry == null) return;
+  final now = DateTime.now();
+  if (day == null || isSameDay(day, now)) {
+    await nutrition.addFood(entry);
+    return;
+  }
+  final (hour, minute) = switch (entry.meal) {
+    Meal.breakfast => (8, 30),
+    Meal.lunch => (13, 30),
+    Meal.dinner => (20, 30),
+    Meal.snack => (17, 0),
+  };
+  await nutrition.addFood(
+    FoodEntry(
+      time: DateTime(day.year, day.month, day.day, hour, minute),
+      meal: entry.meal,
+      name: entry.name,
+      kcal: entry.kcal,
+      protein: entry.protein,
+      carbs: entry.carbs,
+      fat: entry.fat,
+      portions: entry.portions,
+    ),
+  );
 }
 
 class _AddFoodSheet extends StatefulWidget {

@@ -17,6 +17,7 @@ import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/large_title.dart';
 import '../../../shared/widgets/progress_bar.dart';
 import 'add_food_sheet.dart';
+import 'nutrition_day_page.dart';
 import 'weight_sheets.dart';
 
 /// The Nutrition tab: what is left to eat today, the meals, water, and the
@@ -106,9 +107,24 @@ class _NutritionTabState extends State<NutritionTab> {
           ),
           sliver: SliverList.list(
             children: [
-              _CaloriesCard(targets: targets, food: food, exercise: exercise),
+              CaloriesCard(targets: targets, food: food, exercise: exercise),
+              const SizedBox(height: HaloMetrics.cardGap),
+              GroupedCard(
+                children: [
+                  GroupedRow(
+                    leading: Icon(
+                      CupertinoIcons.calendar,
+                      size: 22,
+                      color: HaloColors.nutrition.resolveFrom(context),
+                    ),
+                    title: 'History',
+                    onTap: () =>
+                        Navigator.of(context).push(NutritionDayPage.route()),
+                  ),
+                ],
+              ),
               for (final meal in Meal.values)
-                _MealSection(
+                MealSection(
                   meal: meal,
                   entries: [
                     for (final e in food)
@@ -175,8 +191,9 @@ class _SectionTitle extends StatelessWidget {
 
 /// Calories left today: the goal, less what was eaten, plus what the rings
 /// say was burned on top of an ordinary day. And the three macros.
-class _CaloriesCard extends StatelessWidget {
-  const _CaloriesCard({
+class CaloriesCard extends StatelessWidget {
+  const CaloriesCard({
+    super.key,
     required this.targets,
     required this.food,
     required this.exercise,
@@ -407,11 +424,19 @@ class _Macro extends StatelessWidget {
 }
 
 /// One meal: what was in it, and a row to add to it.
-class _MealSection extends StatelessWidget {
-  const _MealSection({required this.meal, required this.entries});
+class MealSection extends StatelessWidget {
+  const MealSection({
+    super.key,
+    required this.meal,
+    required this.entries,
+    this.day,
+  });
 
   final Meal meal;
   final List<FoodEntry> entries;
+
+  /// The day food is added to; today when null.
+  final DateTime? day;
 
   @override
   Widget build(BuildContext context) {
@@ -441,7 +466,7 @@ class _MealSection extends StatelessWidget {
                 color: accent,
                 size: 22,
               ),
-              onTap: () => showAddFoodSheet(context, meal: meal),
+              onTap: () => showAddFoodSheet(context, meal: meal, day: day),
             ),
           ],
         ),
