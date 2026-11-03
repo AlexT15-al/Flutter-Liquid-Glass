@@ -4,12 +4,17 @@ import 'package:flutter/cupertino.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../domain/app_theme_mode.dart';
+import '../domain/nutrition.dart';
+import '../domain/workout.dart';
 import '../features/mindfulness/breathe_page.dart';
+import '../features/nutrition/presentation/add_food_sheet.dart';
+import '../features/nutrition/presentation/nutrition_day_page.dart';
 import '../features/nutrition/presentation/water_page.dart';
 import '../features/sleep/presentation/sleep_page.dart';
 import '../features/today/presentation/steps_page.dart';
 import '../features/today/presentation/weekly_page.dart';
 import '../features/workout/live/workout_controller.dart';
+import '../platform/live_activity.dart';
 import '../platform/notifications.dart';
 import 'halo_scope.dart';
 import 'shell/halo_chrome.dart';
@@ -77,6 +82,33 @@ class _HaloAppState extends State<HaloApp> {
     final navigator = _navigatorKey.currentState;
     if (navigator == null) return;
     navigator.popUntil((r) => r.isFirst);
+    // The app icon's shortcuts and the Quick Settings tile: things to do,
+    // not only screens to show.
+    switch (route) {
+      case 'start_walk':
+        unawaited(_startWalk());
+        return;
+      case 'add_water':
+        _tabs.tab = HaloTab.today;
+        unawaited(HaloScope.nutritionOf(context).addWater(DateTime.now(), 250));
+        unawaited(navigator.push(WaterPage.route()));
+        return;
+      case 'log_food':
+        _tabs.tab = HaloTab.today;
+        unawaited(navigator.push(NutritionDayPage.route()));
+        final hour = DateTime.now().hour;
+        final meal = hour < 11
+            ? Meal.breakfast
+            : hour < 16
+            ? Meal.lunch
+            : hour < 18
+            ? Meal.snack
+            : Meal.dinner;
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => showAddFoodSheet(navigator.context, meal: meal),
+        );
+        return;
+    }
     final (tab, page) = switch (route) {
       'sleep' => (HaloTab.today, SleepPage.route()),
       'steps' => (HaloTab.today, StepsPage.route()),
@@ -89,6 +121,25 @@ class _HaloAppState extends State<HaloApp> {
     };
     _tabs.tab = tab;
     if (page != null) unawaited(navigator.push(page));
+  }
+
+  /// An Outdoor Walk, straight away: no goal to choose, the countdown
+  /// already running.
+  Future<void> _startWalk() async {
+    final controller = WorkoutScope.read(context);
+    if (controller.session != null) {
+      controller.expand();
+      return;
+    }
+    final preferences = HaloScope.preferencesOf(context);
+    final profile = HaloScope.activityOf(context).profile;
+    await const LiveActivity().prepare();
+    await controller.start(
+      type: WorkoutType.outdoorWalk,
+      goal: WorkoutGoal.open,
+      profile: profile,
+      autoPause: await preferences.readAutoPause(),
+    );
   }
 
   @override

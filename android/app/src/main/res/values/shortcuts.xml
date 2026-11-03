@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_walk">Start Walk</string>
+    <string name="shortcut_walk_long">Start an Outdoor Walk</string>
+    <string name="shortcut_water">Add Water</string>
+    <string name="shortcut_water_long">Add a glass of water, 250 ml</string>
+    <string name="shortcut_food">Log Food</string>
+    <string name="shortcut_food_long">Log what you ate</string>
+    <string name="tile_walk">Start Walk</string>
+</resources>

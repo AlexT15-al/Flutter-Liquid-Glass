@@ -53,7 +53,25 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Holding the app icon: Start Walk, Add Water, Log Food. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+        <!-- Start Walk in the Quick Settings panel. -->
+        <service
+            android:name=".WalkTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_walk"
+            android:label="@string/tile_walk"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
         <service
             android:name=".WorkoutService"
             android:exported="false"

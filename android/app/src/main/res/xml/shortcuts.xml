@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Holding the app icon: the three things done most often, one tap away.
+     Each opens the app with a route it acts on, like a tapped reminder. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="start_walk"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_walk"
+        android:shortcutShortLabel="@string/shortcut_walk"
+        android:shortcutLongLabel="@string/shortcut_walk_long">
+        <intent
+            android:action="com.halo.halo.SHORTCUT"
+            android:targetPackage="com.halo.halo"
+            android:targetClass="com.halo.halo.MainActivity">
+            <extra android:name="halo_route" android:value="start_walk" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="add_water"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_water"
+        android:shortcutShortLabel="@string/shortcut_water"
+        android:shortcutLongLabel="@string/shortcut_water_long">
+        <intent
+            android:action="com.halo.halo.SHORTCUT"
+            android:targetPackage="com.halo.halo"
+            android:targetClass="com.halo.halo.MainActivity">
+            <extra android:name="halo_route" android:value="add_water" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="log_food"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_food"
+        android:shortcutShortLabel="@string/shortcut_food"
+        android:shortcutLongLabel="@string/shortcut_food_long">
+        <intent
+            android:action="com.halo.halo.SHORTCUT"
+            android:targetPackage="com.halo.halo"
+            android:targetClass="com.halo.halo.MainActivity">
+            <extra android:name="halo_route" android:value="log_food" />
+        </intent>
+    </shortcut>
+</shortcuts>
