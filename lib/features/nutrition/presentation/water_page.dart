@@ -10,6 +10,7 @@ import '../../../app/theme/halo_metrics.dart';
 import '../../../app/theme/halo_motion.dart';
 import '../../../domain/nutrition.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/day_bars.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/halo_card.dart';
@@ -29,6 +30,12 @@ class WaterPage extends StatefulWidget {
 
 class _WaterPageState extends State<WaterPage> {
   Stream<List<(int, DateTime, int)>>? _week;
+
+  /// How far back the chart goes.
+  static const _days = 90;
+
+  /// The day whose entries are listed: today until another is tapped.
+  DateTime? _selected;
   late final DateTime _today = () {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
@@ -46,7 +53,7 @@ class _WaterPageState extends State<WaterPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _week ??= HaloScope.nutritionOf(context).watchWaterBetween(
-      _today.subtract(const Duration(days: 6)),
+      _today.subtract(const Duration(days: _days - 1)),
       _today.add(const Duration(days: 1)),
     );
   }
@@ -88,15 +95,25 @@ class _WaterPageState extends State<WaterPage> {
               if (!w.$2.isBefore(_today)) w,
           ];
           final ml = today.fold<int>(0, (t, w) => t + w.$3);
-          final perDay = List.filled(7, 0);
+          final perDay = List.filled(_days, 0);
           for (final w in week) {
+            final day = DateTime(w.$2.year, w.$2.month, w.$2.day);
+            // Counted in calendar days, so a clock change does not shift one.
             final i =
-                6 -
-                _today
-                    .difference(DateTime(w.$2.year, w.$2.month, w.$2.day))
-                    .inDays;
-            if (i >= 0 && i < 7) perDay[i] += w.$3;
+                _days -
+                1 -
+                DateTime.utc(
+                  _today.year,
+                  _today.month,
+                  _today.day,
+                ).difference(DateTime.utc(day.year, day.month, day.day)).inDays;
+            if (i >= 0 && i < _days) perDay[i] += w.$3;
           }
+          final selected = _selected ?? _today;
+          final listed = [
+            for (final w in week)
+              if (isSameDay(w.$2, selected)) w,
+          ];
 
           return ListView(
             padding: EdgeInsets.fromLTRB(
@@ -169,57 +186,23 @@ class _WaterPageState extends State<WaterPage> {
                 ),
               ),
               const SizedBox(height: HaloMetrics.sectionTopGap),
-              const GroupCaption('This Week'),
+              const GroupCaption('Days'),
               HaloCard(
-                child: SizedBox(
-                  height: 110,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      for (var i = 0; i < 7; i++)
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Container(
-                                width: 18,
-                                height: math.max(
-                                  6,
-                                  80 * (perDay[i] / target).clamp(0.0, 1.0),
-                                ),
-                                decoration: ShapeDecoration(
-                                  color: perDay[i] >= target
-                                      ? color
-                                      : color.withValues(alpha: 0.45),
-                                  shape: const StadiumBorder(),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                Format.weekdayLetter(
-                                  _today.subtract(Duration(days: 6 - i)),
-                                ),
-                                style: TextStyle(
-                                  color: i == 6
-                                      ? HaloColors.labelOf(context)
-                                      : HaloColors.secondaryLabelOf(context),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
+                child: DayBars(
+                  values: [for (final v in perDay) v.toDouble()],
+                  lastDay: _today,
+                  color: color,
+                  goal: target.toDouble(),
+                  describe: (v) => '${Format.litres(v.round())} L',
+                  onSelect: (day) => setState(() => _selected = day),
                 ),
               ),
-              if (today.isNotEmpty) ...[
+              if (listed.isNotEmpty) ...[
                 const SizedBox(height: HaloMetrics.sectionTopGap),
-                const GroupCaption('Today'),
+                GroupCaption(Format.relativeDay(selected)),
                 GroupedCard(
                   children: [
-                    for (final (id, time, amount) in today.reversed)
+                    for (final (id, time, amount) in listed.reversed)
                       GroupedRow(
                         title: Format.timeOfDay(time),
                         value: '$amount ml',

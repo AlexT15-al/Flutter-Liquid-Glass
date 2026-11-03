@@ -11,6 +11,7 @@ import '../../../domain/sleep.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/halo_alert.dart';
 import '../../../shared/widgets/glass_action_button.dart';
+import '../../../shared/widgets/day_bars.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
@@ -46,7 +47,7 @@ class _SleepPageState extends State<SleepPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _nights ??= SleepScope.read(context).repository.watchNights(14);
+    _nights ??= SleepScope.read(context).repository.watchNights(120);
     _schedule ??= HaloScope.preferencesOf(context).watchSleepSchedule();
   }
 
@@ -125,7 +126,7 @@ class _SleepPageState extends State<SleepPage> {
                       ),
                     ],
                   ),
-                  const _SectionTitle('Last 7 Nights'),
+                  const _SectionTitle('Nights'),
                   _WeekCard(nights: nights, schedule: schedule, now: now),
                   const SizedBox(height: HaloMetrics.sectionTopGap),
                   GroupedCard(
@@ -611,8 +612,9 @@ class _TrackingCard extends StatelessWidget {
   }
 }
 
-/// The week in bars, with the average and how steady bedtime was.
-class _WeekCard extends StatelessWidget {
+/// The week's average and how steady bedtime was, over bars for every night
+/// back three months: tap one for its time asleep, and open it.
+class _WeekCard extends StatefulWidget {
   const _WeekCard({
     required this.nights,
     required this.schedule,
@@ -624,7 +626,19 @@ class _WeekCard extends StatelessWidget {
   final DateTime now;
 
   @override
+  State<_WeekCard> createState() => _WeekCardState();
+}
+
+class _WeekCardState extends State<_WeekCard> {
+  static const _days = 90;
+
+  DateTime? _selected;
+
+  @override
   Widget build(BuildContext context) {
+    final nights = widget.nights;
+    final schedule = widget.schedule;
+    final now = widget.now;
     final chart = SleepWeekChart(
       nights: nights,
       goal: schedule.goal,
@@ -638,6 +652,22 @@ class _WeekCard extends StatelessWidget {
     // How far bedtimes strayed from their own average, in minutes. Measured
     // around noon, so 23:50 and 00:10 are twenty minutes apart, not a day.
     final day = DateTime(now.year, now.month, now.day);
+    // Minutes asleep on each morning, back [_days], oldest first.
+    final perMorning = List.filled(_days, 0);
+    for (final n in nights) {
+      final back = DateTime.utc(day.year, day.month, day.day)
+          .difference(
+            DateTime.utc(n.morning.year, n.morning.month, n.morning.day),
+          )
+          .inDays;
+      if (back >= 0 && back < _days) {
+        perMorning[_days - 1 - back] += n.asleep.inMinutes;
+      }
+    }
+    final selected = _selected ?? day;
+    final shown = nights
+        .where((n) => isSameDay(n.morning, selected))
+        .firstOrNull;
     final bedtimes = [
       for (final n in nights)
         if (day.difference(n.morning).inDays < 7)
@@ -698,7 +728,41 @@ class _WeekCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          chart,
+          DayBars(
+            values: [for (final m in perMorning) m.toDouble()],
+            lastDay: day,
+            color: HaloColors.sleep.resolveFrom(context),
+            goal: schedule.goal.inMinutes.toDouble(),
+            describe: (v) => v <= 0
+                ? 'No sleep recorded'
+                : Format.durationWords(Duration(minutes: v.round())),
+            onSelect: (d) => setState(() => _selected = d),
+          ),
+          if (shown != null) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).push(NightPage.route(shown)),
+              child: Row(
+                children: [
+                  Text(
+                    'Open This Night',
+                    style: TextStyle(
+                      color: HaloColors.sleep.resolveFrom(context),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    CupertinoIcons.chevron_forward,
+                    size: 14,
+                    color: HaloColors.sleep.resolveFrom(context),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

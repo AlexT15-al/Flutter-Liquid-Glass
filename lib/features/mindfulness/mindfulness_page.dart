@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
 
 import '../../app/halo_scope.dart';
@@ -7,6 +5,7 @@ import '../../app/theme/halo_colors.dart';
 import '../../app/theme/halo_metrics.dart';
 import '../../domain/mindfulness.dart';
 import '../../shared/format.dart';
+import '../../shared/widgets/day_bars.dart';
 import '../../shared/widgets/grouped_list.dart';
 import '../../shared/widgets/halo_card.dart';
 import '../../shared/widgets/halo_page.dart';
@@ -37,15 +36,18 @@ class _MindfulnessPageState extends State<MindfulnessPage> {
     return DateTime(now.year, now.month, now.day);
   }();
   Stream<List<MindfulSession>>? _sessions;
+
+  /// How far back the chart goes.
+  static const _days = 90;
   Stream<List<MoodEntry>>? _moods;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final repo = HaloScope.mindfulnessOf(context);
-    final weekStart = _today.subtract(const Duration(days: 6));
-    _sessions ??= repo.watchSessionsSince(weekStart);
-    _moods ??= repo.watchMoodsSince(_today.subtract(const Duration(days: 29)));
+    final from = _today.subtract(const Duration(days: _days - 1));
+    _sessions ??= repo.watchSessionsSince(from);
+    _moods ??= repo.watchMoodsSince(from);
   }
 
   @override
@@ -209,87 +211,31 @@ class _MindfulnessPageState extends State<MindfulnessPage> {
                   ),
                 ),
                 const SizedBox(height: HaloMetrics.sectionTopGap),
-                const GroupCaption('This Week'),
+                const GroupCaption('Days'),
                 HaloCard(
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 92,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            for (var i = 6; i >= 0; i--)
-                              Expanded(
-                                child: () {
-                                  final day = _today.subtract(
-                                    Duration(days: i),
-                                  );
-                                  final m = minutesOn(day);
-                                  final dayMoods = moods.where(
-                                    (e) =>
-                                        !e.time.isBefore(day) &&
-                                        e.time.isBefore(
-                                          day.add(const Duration(days: 1)),
-                                        ),
-                                  );
-                                  final avg = dayMoods.isEmpty
-                                      ? null
-                                      : (dayMoods.fold<int>(
-                                                  0,
-                                                  (t, e) => t + e.valence,
-                                                ) /
-                                                dayMoods.length)
-                                            .round();
-                                  return Column(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        width: 14,
-                                        height: 14,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: avg == null
-                                              ? HaloColors.fill.resolveFrom(
-                                                  context,
-                                                )
-                                              : moodColor(avg),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        width: 16,
-                                        height: math.max(
-                                          5,
-                                          44 *
-                                              (m / (mindfulGoalMinutes * 2))
-                                                  .clamp(0.0, 1.0),
-                                        ),
-                                        decoration: ShapeDecoration(
-                                          color: m >= mindfulGoalMinutes
-                                              ? color
-                                              : color.withValues(alpha: 0.4),
-                                          shape: const StadiumBorder(),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        Format.weekdayLetter(day),
-                                        style: TextStyle(
-                                          color: i == 0
-                                              ? HaloColors.labelOf(context)
-                                              : secondary,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }(),
-                              ),
-                          ],
-                        ),
-                      ),
+                  child: DayBars(
+                    values: [
+                      for (var i = _days - 1; i >= 0; i--)
+                        minutesOn(
+                          DateTime(_today.year, _today.month, _today.day - i),
+                        ).toDouble(),
                     ],
+                    lastDay: _today,
+                    color: color,
+                    goal: mindfulGoalMinutes.toDouble(),
+                    height: 90,
+                    describe: (v) => '${v.round()} mindful min',
+                    dot: (day) {
+                      final dayMoods = moods.where(
+                        (e) => isSameDay(e.time, day),
+                      );
+                      if (dayMoods.isEmpty) return null;
+                      return moodColor(
+                        (dayMoods.fold<int>(0, (t, e) => t + e.valence) /
+                                dayMoods.length)
+                            .round(),
+                      );
+                    },
                   ),
                 ),
                 const GroupCaption(

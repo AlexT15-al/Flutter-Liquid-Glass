@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
 
 import '../../../app/halo_scope.dart';
@@ -8,6 +6,7 @@ import '../../../app/theme/halo_metrics.dart';
 import '../../../data/activity/activity_history.dart';
 import '../../../domain/activity_summary.dart';
 import '../../../shared/format.dart';
+import '../../../shared/widgets/day_bars.dart';
 import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
@@ -38,7 +37,7 @@ class _StepsPageState extends State<StepsPage> {
           HaloScope.databaseOf(context),
           HaloScope.workoutsOf(context),
         ).days(
-          now.subtract(const Duration(days: 29)),
+          now.subtract(const Duration(days: 89)),
           now,
           HaloScope.activityOf(context).profile,
         );
@@ -57,11 +56,6 @@ class _StepsPageState extends State<StepsPage> {
         builder: (context, _) {
           final today = store.today;
           final goal = store.goals.steps;
-          final week = store.lastDays(7);
-          final top = math.max(
-            goal * 1.15,
-            week.map((d) => d.steps).fold(0, math.max) * 1.05,
-          );
 
           return ListView(
             padding: EdgeInsets.fromLTRB(
@@ -155,63 +149,35 @@ class _StepsPageState extends State<StepsPage> {
                 ),
               ),
               const SizedBox(height: HaloMetrics.sectionTopGap),
-              const GroupCaption('This Week'),
-              HaloCard(
-                child: SizedBox(
-                  height: 140,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      for (final day in week)
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                day.steps >= 1000
-                                    ? '${(day.steps / 1000).toStringAsFixed(1)}k'
-                                    : '${day.steps}',
-                                style: TextStyle(
-                                  color: secondary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                width: 18,
-                                height: math.max(6, 96 * day.steps / top),
-                                decoration: ShapeDecoration(
-                                  color: day.steps >= goal
-                                      ? color
-                                      : color.withValues(alpha: 0.45),
-                                  shape: const StadiumBorder(),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                Format.weekdayLetter(day.day),
-                                style: TextStyle(
-                                  color: day == week.last
-                                      ? HaloColors.labelOf(context)
-                                      : secondary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+              const GroupCaption('Days'),
+              FutureBuilder<List<ActivitySummary>>(
+                future: _month,
+                builder: (context, snapshot) {
+                  // The stored days, with today live from the counter.
+                  final days = [
+                    ...?snapshot.data?.where((d) => d.day != today.day),
+                    today,
+                  ];
+                  return HaloCard(
+                    child: DayBars(
+                      values: [for (final d in days) d.steps.toDouble()],
+                      lastDay: today.day,
+                      color: color,
+                      goal: goal.toDouble(),
+                      describe: (v) => '${Format.integer(v)} steps',
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: HaloMetrics.sectionTopGap),
               const GroupCaption('Last 30 Days'),
               FutureBuilder<List<ActivitySummary>>(
                 future: _month,
                 builder: (context, snapshot) {
-                  final days = snapshot.data ?? const <ActivitySummary>[];
+                  final all = snapshot.data ?? const <ActivitySummary>[];
+                  final days = all.length > 30
+                      ? all.sublist(all.length - 30)
+                      : all;
                   final counted = days.where((d) => d.steps > 0).toList();
                   final average = counted.isEmpty
                       ? 0
