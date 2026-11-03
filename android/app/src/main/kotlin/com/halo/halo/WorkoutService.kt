@@ -42,6 +42,10 @@ class WorkoutService : Service() {
                     startForeground(WorkoutNotification.ID, notification)
                 else -> throw IllegalStateException("No foreground service type is allowed.")
             }
+            // Posted again through the manager: One UI promotes it to the Now
+            // Bar from a post, not from the service starting.
+            getSystemService(NotificationManager::class.java)
+                ?.notify(WorkoutNotification.ID, notification)
         } catch (_: Exception) {
             // Without a type it may use, the workout still shows; it just is
             // not protected from being stopped in the background.

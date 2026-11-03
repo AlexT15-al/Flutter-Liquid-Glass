@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import '../../../data/workouts/workout_session.dart';
 import '../../../domain/workout.dart';
@@ -19,13 +20,19 @@ class WorkoutLiveActivity {
     required Stream<bool> enabled,
     this._platform = const LiveActivity(),
     DateTime Function()? clock,
+    int Function()? exerciseGoal,
   }) : _enabledStream = enabled,
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now,
+       _exerciseGoal = exerciseGoal ?? (() => 30);
 
   final WorkoutController _controller;
   final Stream<bool> _enabledStream;
   final LiveActivity _platform;
   final DateTime Function() _clock;
+
+  /// The day's Exercise goal in minutes: what an open workout's progress
+  /// bar fills towards.
+  final int Function() _exerciseGoal;
 
   /// Between updates, unless the workout pauses or resumes.
   static const minInterval = Duration(seconds: 5);
@@ -90,7 +97,11 @@ class WorkoutLiveActivity {
     }
     if (session.phase == SessionPhase.countdown) return;
 
-    final state = stateOf(session, quiet: !_enabled);
+    final state = stateOf(
+      session,
+      quiet: !_enabled,
+      exerciseGoal: _exerciseGoal(),
+    );
     // Turned off, an indoor workout shows nothing at all.
     if (state.quiet && !state.gps) return;
 
@@ -117,6 +128,7 @@ class WorkoutLiveActivity {
   static LiveActivityState stateOf(
     WorkoutSession session, {
     bool quiet = false,
+    int exerciseGoal = 30,
   }) {
     final type = session.type;
     final km = session.distanceKm;
@@ -126,9 +138,13 @@ class WorkoutLiveActivity {
     final hasDistance = type.hasDistance && km > 0;
     final intervals = session.intervals;
     final segment = intervals?.current;
+    // A bar always, which the Now Bar draws: the goal's, the interval's, or
+    // with an open goal, the minutes towards the day's Exercise goal.
+    final goalProgress = session.goalProgress;
+    final minutes = session.elapsed.inMinutes;
     final progress = intervals != null
         ? intervals.progress
-        : session.goalProgress;
+        : goalProgress ?? (minutes / math.max(1, exerciseGoal)).clamp(0.0, 1.0);
     return LiveActivityState(
       title: type.title,
       symbol: symbolOf(type),
@@ -142,7 +158,7 @@ class WorkoutLiveActivity {
           : type == WorkoutType.outdoorCycle
           ? '${SplitsCard.kmh(pace).toStringAsFixed(1)} km/h'
           : '${Format.pace(pace)} /km',
-      progress: progress?.clamp(0.0, 1.0),
+      progress: progress.clamp(0.0, 1.0),
       // A custom workout shows the interval under way, which changes only
       // when the next one starts, so the update goes out straight away.
       goal: intervals != null
@@ -150,8 +166,8 @@ class WorkoutLiveActivity {
                 ? 'Complete'
                 : '${segment.label} · ${segment.step.describe}'
           : session.goal.kind == WorkoutGoalKind.open
-          ? null
-          : session.goal.describe,
+          ? '$minutes of $exerciseGoal min exercise'
+          : 'Goal ${session.goal.describe}',
       gps: session.followsGps,
       quiet: quiet,
     );

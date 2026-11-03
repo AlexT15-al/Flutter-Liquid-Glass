@@ -90,6 +90,7 @@ Future<void> main() async {
   WorkoutLiveActivity(
     controller: workoutController,
     enabled: preferences.watchLiveActivity(),
+    exerciseGoal: () => activity.goals.exerciseMinutes,
   ).attach();
 
   // A night left open (the app was closed while it tracked) is picked up or

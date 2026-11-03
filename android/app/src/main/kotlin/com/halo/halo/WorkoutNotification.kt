@@ -86,9 +86,11 @@ data class WorkoutState(
  * On Android 16 a promoted notification becomes a chip in the status bar and
  * a card at the top of the lock screen and shade, and One UI 8 shows it in
  * the Now Bar. It qualifies only while it keeps to the rules: ongoing, with a
- * title, a standard or progress style, not colorized, no custom views, on a
- * channel above minimum importance. Older versions show it as an ordinary
- * ongoing notification.
+ * title, a progress style, not colorized, no custom views. Samsung asks for
+ * more: the app declares it in the manifest
+ * (`com.samsung.android.support.ongoing_activity`), the channel is of default
+ * importance, and the notification is posted as well as started with the
+ * service. Older versions show it as an ordinary ongoing notification.
  *
  * The time runs on its own: the notification is a chronometer from the
  * moment the workout would have started had it never paused, so nothing has
@@ -96,7 +98,14 @@ data class WorkoutState(
  */
 object WorkoutNotification {
     const val ID = 7301
-    private const val CHANNEL_ID = "workout_live"
+
+    /**
+     * Default importance, silent: what Samsung's Now Bar takes a Live Update
+     * from (low importance stays a notification). A channel's importance is
+     * fixed once made, so a new one replaces the first.
+     */
+    private const val CHANNEL_ID = "workout_live_v2"
+    private val OLD_CHANNELS = listOf("workout_live")
 
     const val ACTION_OPEN = "com.halo.halo.OPEN_WORKOUT"
     const val ACTION_PAUSE = "com.halo.halo.PAUSE_WORKOUT"
@@ -110,16 +119,24 @@ object WorkoutNotification {
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        for (old in OLD_CHANNELS) {
+            try {
+                manager.deleteNotificationChannel(old)
+            } catch (_: Exception) {
+            }
+        }
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        // Low: it updates every few seconds and must never make a sound. Still
-        // above minimum, which a Live Update requires.
+        // Default importance, which the Now Bar asks for, but silent: it
+        // updates every few seconds and must never make a sound or buzz.
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Workout in progress",
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = "The time and numbers of the workout you are doing."
             setShowBadge(false)
+            setSound(null, null)
+            enableVibration(false)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         manager.createNotificationChannel(channel)
@@ -173,24 +190,27 @@ object WorkoutNotification {
                 .setUsesChronometer(true)
         }
 
+        // Always a progress style on Android 16: the Now Bar shows Live
+        // Updates drawn with one. The goal, the interval, or (with an open
+        // goal) the day's Exercise goal, sent from Dart.
         val progress = state.progress
-        if (progress != null) {
-            val value = (progress.coerceIn(0.0, 1.0) * 1000).toInt()
-            if (Build.VERSION.SDK_INT >= 36) {
-                builder.setStyle(
-                    Notification.ProgressStyle()
-                        .setProgressSegments(
-                            listOf(Notification.ProgressStyle.Segment(1000).setColor(ACCENT)),
-                        )
-                        .setProgress(value)
-                        .setProgressTrackerIcon(
-                            Icon.createWithResource(context, R.drawable.ic_stat_halo),
-                        ),
-                )
-            } else {
-                builder.setProgress(1000, value, false)
-            }
-            state.goal?.let { builder.setSubText(if (state.paused) "${state.clock} · Goal $it" else "Goal $it") }
+        val value = ((progress ?: 0.0).coerceIn(0.0, 1.0) * 1000).toInt()
+        if (Build.VERSION.SDK_INT >= 36) {
+            builder.setStyle(
+                Notification.ProgressStyle()
+                    .setProgressSegments(
+                        listOf(Notification.ProgressStyle.Segment(1000).setColor(ACCENT)),
+                    )
+                    .setProgress(value)
+                    .setProgressTrackerIcon(
+                        Icon.createWithResource(context, R.drawable.ic_stat_halo),
+                    ),
+            )
+        } else if (progress != null) {
+            builder.setProgress(1000, value, false)
+        }
+        state.goal?.let {
+            builder.setSubText(if (state.paused) "${state.clock} · $it" else it)
         }
 
         requestPromotion(builder, state)
@@ -211,12 +231,15 @@ object WorkoutNotification {
                 .invoke(builder, true)
         } catch (_: Exception) {
         }
-        // The chip: the running time on its own, or the word while paused.
-        if (state.paused) {
+        // The chip in the status bar and the Now Bar's short line: the word
+        // while paused, the distance while it grows; otherwise the running
+        // time, from the chronometer.
+        val chip = if (state.paused) "Paused" else state.distance
+        if (chip != null) {
             try {
                 builder.javaClass
                     .getMethod("setShortCriticalText", String::class.java)
-                    .invoke(builder, "Paused")
+                    .invoke(builder, chip)
             } catch (_: Exception) {
             }
         }
