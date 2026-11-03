@@ -11,8 +11,9 @@ import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
 import 'nutrition_tab.dart';
 
-/// Nutrition, day by day: calories for every day back three months, and
-/// any day in full, its meals there to change, remove or add to.
+/// Nutrition, day by day: any day in full, its meals there to change,
+/// remove or add to; below, calories for every day back three months and
+/// the days logged, to pick another.
 class NutritionDayPage extends StatefulWidget {
   const NutritionDayPage({super.key, this.day});
 
@@ -106,22 +107,6 @@ class _NutritionDayPageState extends State<NutritionDayPage> {
                 HaloMetrics.bottomInset(context),
               ),
               children: [
-                HaloCard(
-                  child: DayBars(
-                    // Rebuilt on a day picked from the history, to show it.
-                    key: ValueKey(_day),
-                    values: perDay,
-                    lastDay: _today,
-                    color: color,
-                    goal: targets.kcal.toDouble(),
-                    goalIsTarget: false,
-                    describe: (v) =>
-                        v <= 0 ? 'Nothing logged' : '${Format.integer(v)} kcal',
-                    initial: _back(_today, _day),
-                    onSelect: (day) => setState(() => _day = day),
-                  ),
-                ),
-                const SizedBox(height: HaloMetrics.sectionTopGap),
                 GroupCaption(Format.relativeDay(_day)),
                 CaloriesCard(
                   targets: targets,
@@ -137,6 +122,23 @@ class _NutritionDayPageState extends State<NutritionDayPage> {
                         if (e.meal == meal) e,
                     ],
                   ),
+                const SizedBox(height: HaloMetrics.sectionTopGap),
+                const GroupCaption('Days'),
+                HaloCard(
+                  child: DayBars(
+                    // Rebuilt on a day picked from the history, to show it.
+                    key: ValueKey(_day),
+                    values: perDay,
+                    lastDay: _today,
+                    color: color,
+                    goal: targets.kcal.toDouble(),
+                    goalIsTarget: false,
+                    describe: (v) =>
+                        v <= 0 ? 'Nothing logged' : '${Format.integer(v)} kcal',
+                    initial: _back(_today, _day),
+                    onSelect: (day) => setState(() => _day = day),
+                  ),
+                ),
                 if (logged.isNotEmpty) ...[
                   const SizedBox(height: HaloMetrics.sectionTopGap),
                   const GroupCaption('History'),

@@ -39,6 +39,16 @@ class NutritionRepository {
     return out;
   }
 
+  /// Every food logged before, once each by name, the latest first: the
+  /// foods typed in or scanned, for search.
+  Future<List<FoodEntry>> known() async {
+    final seen = <String>{};
+    return [
+      for (final row in await _db.recentFoods(3000))
+        if (seen.add(row.name.toLowerCase())) _entry(row),
+    ];
+  }
+
   Future<void> addWater(DateTime time, int ml) => _db.insertWater(time, ml);
 
   Future<void> deleteWater(int id) => _db.deleteWater(id);

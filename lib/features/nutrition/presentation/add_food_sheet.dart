@@ -8,6 +8,7 @@ import '../../../app/theme/halo_glass.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../data/nutrition/open_food_facts.dart';
 import '../../../domain/food_catalog.dart';
+import '../../../domain/food_search.dart';
 import '../../../domain/nutrition.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/grouped_list.dart';
@@ -83,11 +84,16 @@ Future<void> showAddFoodSheet(
 }) async {
   final nutrition = HaloScope.nutritionOf(context);
   final recent = await nutrition.recent();
+  final known = await nutrition.known();
   if (!context.mounted) return;
   final entry = await showHaloSheet<FoodEntry>(
     context,
-    builder: (context, scroll) =>
-        _AddFoodSheet(controller: scroll, meal: meal, recent: recent),
+    builder: (context, scroll) => _AddFoodSheet(
+      controller: scroll,
+      meal: meal,
+      recent: recent,
+      known: known,
+    ),
   );
   if (entry == null) return;
   final now = DateTime.now();
@@ -120,11 +126,16 @@ class _AddFoodSheet extends StatefulWidget {
     required this.controller,
     required this.meal,
     required this.recent,
+    this.known = const [],
   });
 
   final ScrollController controller;
   final Meal meal;
   final List<FoodEntry> recent;
+
+  /// Every food logged before, typed in or scanned: searched alongside the
+  /// catalogue.
+  final List<FoodEntry> known;
 
   @override
   State<_AddFoodSheet> createState() => _AddFoodSheetState();
@@ -202,6 +213,24 @@ class _AddFoodSheetState extends State<_AddFoodSheet> {
     }
   }
 
+  /// The user's own foods and the catalogue's, best match first; at the
+  /// same match, the user's own.
+  List<_Choice> _search(String query) {
+    final words = FoodSearch.words(query);
+    if (words.isEmpty) return const [];
+    final catalog = {for (final f in FoodCatalog.all) f.name.toLowerCase()};
+    final scored = <(int, _Choice)>[
+      for (final e in widget.known)
+        if (!catalog.contains(e.name.toLowerCase()))
+          if (FoodSearch.score(e.name, words) case final s?)
+            (s - 500, _Choice.entry(e)),
+      for (final item in FoodCatalog.all)
+        if (FoodSearch.score(item.name, words) case final s?)
+          (s, _Choice.item(item)),
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
+    return [for (final (_, c) in scored.take(15)) c];
+  }
+
   void _pick(_Choice choice) {
     HapticFeedback.selectionClick();
     FocusManager.instance.primaryFocus?.unfocus();
@@ -216,7 +245,7 @@ class _AddFoodSheetState extends State<_AddFoodSheet> {
   Widget build(BuildContext context) {
     final entry = _entry;
     final query = _query.text.trim();
-    final results = FoodCatalog.search(query).take(12).toList();
+    final results = _search(query);
     final suggestions = query.isEmpty
         ? [
             for (final e in widget.recent.take(4)) _Choice.entry(e),
@@ -226,7 +255,7 @@ class _AddFoodSheetState extends State<_AddFoodSheet> {
                     .take(8))
               _Choice.item(item),
           ]
-        : [for (final item in results) _Choice.item(item)];
+        : results;
 
     return HaloSheet(
       controller: widget.controller,

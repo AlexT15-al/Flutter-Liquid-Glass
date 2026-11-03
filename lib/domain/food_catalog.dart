@@ -1,3 +1,4 @@
+import 'food_search.dart';
 import 'nutrition.dart';
 
 part 'food_catalog_more.dart';
@@ -794,26 +795,16 @@ abstract final class FoodCatalog {
     FoodItem('Soft drink', '330 ml', 140, 0, 35, 0, tags: _lenten),
   ];
 
-  /// Foods whose name contains every word typed, best match first.
+  /// The foods matching what was typed, best match first: any word, in
+  /// Greek or Greeklish, with a letter wrong (see [FoodSearch]).
   static List<FoodItem> search(String query) {
-    final words = query
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .toList();
+    final words = FoodSearch.words(query);
     if (words.isEmpty) return const [];
-    final hits = [
+    final scored = <(int, FoodItem)>[
       for (final item in all)
-        if (words.every((w) => item.name.toLowerCase().contains(w))) item,
-    ];
-    final first = words.first;
-    hits.sort((a, b) {
-      final aStarts = a.name.toLowerCase().startsWith(first) ? 0 : 1;
-      final bStarts = b.name.toLowerCase().startsWith(first) ? 0 : 1;
-      if (aStarts != bStarts) return aStarts - bStarts;
-      return a.name.length - b.name.length;
-    });
-    return hits;
+        if (FoodSearch.score(item.name, words) case final s?) (s, item),
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
+    return [for (final (_, item) in scored) item];
   }
 
   /// For a meal without a known food: roughly how big it was.
