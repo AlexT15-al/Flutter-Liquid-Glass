@@ -262,7 +262,7 @@ class HaloPreferences {
           names = (json as List).cast<String>();
           known = {
             for (final c in TodayCard.values)
-              if (c != TodayCard.week) c.name,
+              if (c != TodayCard.week && c != TodayCard.suggestions) c.name,
           };
         }
         final cards = [for (final name in names) ?byName[name]];

@@ -14,6 +14,12 @@ enum TodayCard {
     color: HaloColors.accent,
     wide: true,
   ),
+  suggestions(
+    title: 'For You',
+    icon: CupertinoIcons.sparkles,
+    color: HaloColors.accent,
+    wide: true,
+  ),
   week(
     title: 'Last 7 Days',
     icon: CupertinoIcons.calendar,
@@ -75,6 +81,7 @@ enum TodayCard {
   /// What a new install shows, in order.
   static const defaults = [
     TodayCard.readiness,
+    TodayCard.suggestions,
     TodayCard.week,
     TodayCard.steps,
     TodayCard.distance,

@@ -30,6 +30,7 @@ import 'widgets/activity_card.dart';
 import 'widgets/metric_tile.dart';
 import 'widgets/readiness_card.dart';
 import 'widgets/step_access_card.dart';
+import 'widgets/suggestions_card.dart';
 import 'widgets/walk_prompt.dart';
 
 /// The Today tab: the day at a glance.
@@ -197,6 +198,7 @@ class _TodayTabState extends State<TodayTab> {
 
     return switch (card) {
       TodayCard.readiness => const ReadinessCard(),
+      TodayCard.suggestions => const SuggestionsCard(),
       TodayCard.week => const WeeklyCard(),
       TodayCard.steps => MetricTile(
         title: card.title,
