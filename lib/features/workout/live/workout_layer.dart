@@ -449,7 +449,7 @@ class _Readout extends StatelessWidget {
           opacity: paused ? 1 : 0,
           duration: HaloMotion.of(context, HaloMotion.controlSwapDuration),
           child: Text(
-            'PAUSED',
+            session.autoPaused ? 'AUTO-PAUSED' : 'PAUSED',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: HaloColors.secondaryLabelOf(context),

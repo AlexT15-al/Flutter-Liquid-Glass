@@ -50,9 +50,17 @@ class WorkoutController extends ChangeNotifier {
 
   /// A new interval: two firm taps, felt through a pocket or an armband,
   /// whether the workout is on screen or not.
+  bool _wasAutoPaused = false;
+
   void _onSession() {
     final session = _session;
-    if (session == null || session.segmentChanges == _segments) return;
+    if (session == null) return;
+    // Paused or carried on by itself: a firm tap, felt in a pocket.
+    if (session.autoPaused != _wasAutoPaused) {
+      _wasAutoPaused = session.autoPaused;
+      HapticFeedback.mediumImpact();
+    }
+    if (session.segmentChanges == _segments) return;
     _segments = session.segmentChanges;
     HapticFeedback.heavyImpact();
     Timer(const Duration(milliseconds: 180), HapticFeedback.heavyImpact);
@@ -68,6 +76,7 @@ class WorkoutController extends ChangeNotifier {
     required WorkoutGoal goal,
     required BodyProfile profile,
     CustomWorkout? custom,
+    Duration? autoPause,
   }) async {
     if (_session != null) return;
     final location = _location;
@@ -87,10 +96,12 @@ class WorkoutController extends ChangeNotifier {
       locations: fixes,
       locationAccess: access,
       custom: custom,
+      autoPause: autoPause,
       clock: _clock,
     );
     _session = session;
     _segments = 0;
+    _wasAutoPaused = false;
     session.addListener(_onSession);
     _expanded = true;
     _countdown = Timer(WorkoutSession.countdownLength, session.begin);

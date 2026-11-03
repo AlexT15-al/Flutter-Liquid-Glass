@@ -8,6 +8,7 @@ import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_glass.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../data/activity/step_tracker.dart';
+import '../../../data/preferences/halo_preferences.dart';
 import '../../../data/transfer/data_transfer.dart';
 import '../../../domain/app_theme_mode.dart';
 import '../../../platform/android_permissions.dart';
@@ -73,13 +74,21 @@ class SettingsPage extends StatelessWidget {
                 watch: preferences.watchLiveActivity,
                 set: preferences.setLiveActivity,
               ),
+              _FlagRow(
+                title: 'Auto-Pause',
+                watch: preferences.watchAutoPause,
+                set: preferences.setAutoPause,
+              ),
+              const _AutoPauseRow(),
             ],
           ),
           const GroupCaption(
             'Shows the workout in progress on the Lock Screen and in the '
             'status bar, and in the Now Bar on Galaxy phones. Outdoor '
             'workouts on Android still show a small notification while they '
-            'record the route.',
+            'record the route. Auto-Pause pauses a walk, run, hike or ride '
+            'when you stop moving for the time chosen, and carries on when '
+            'you set off again.',
             footer: true,
           ),
           const SizedBox(height: HaloMetrics.sectionTopGap),
@@ -281,6 +290,78 @@ class _MotionAccessCard extends StatelessWidget {
 
 /// A setting that is on or off. As in iOS Settings, the switch is the only
 /// target: the row around it does not highlight.
+/// How long without moving before a workout pauses itself.
+class _AutoPauseRow extends StatefulWidget {
+  const _AutoPauseRow();
+
+  @override
+  State<_AutoPauseRow> createState() => _AutoPauseRowState();
+}
+
+class _AutoPauseRowState extends State<_AutoPauseRow> {
+  static const _options = [10, 15, 30, 60, 120];
+
+  Stream<int>? _seconds;
+  Stream<bool>? _on;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final preferences = HaloScope.preferencesOf(context);
+    _seconds ??= preferences.watchAutoPauseSeconds();
+    _on ??= preferences.watchAutoPause();
+  }
+
+  static String _label(int s) => s < 60 ? '$s sec' : '${s ~/ 60} min';
+
+  @override
+  Widget build(BuildContext context) {
+    final preferences = HaloScope.preferencesOf(context);
+    return StreamBuilder<bool>(
+      stream: _on,
+      initialData: true,
+      builder: (context, on) {
+        if (on.data == false) return const SizedBox.shrink();
+        return StreamBuilder<int>(
+          stream: _seconds,
+          initialData: HaloPreferences.defaultAutoPauseSeconds,
+          builder: (context, snapshot) {
+            final seconds =
+                snapshot.data ?? HaloPreferences.defaultAutoPauseSeconds;
+            final index = _options.indexOf(seconds);
+            return GroupedRow(
+              title: 'Pause After',
+              value: _label(seconds),
+              editor: RowWheel(
+                child: CupertinoPicker(
+                  scrollController: FixedExtentScrollController(
+                    initialItem: index < 0 ? 2 : index,
+                  ),
+                  itemExtent: 36,
+                  onSelectedItemChanged: (i) =>
+                      preferences.setAutoPauseSeconds(_options[i]),
+                  children: [
+                    for (final s in _options)
+                      Center(
+                        child: Text(
+                          _label(s),
+                          style: TextStyle(
+                            color: HaloColors.labelOf(context),
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class _FlagRow extends StatefulWidget {
   const _FlagRow({required this.title, required this.watch, required this.set});
 

@@ -29,6 +29,8 @@ class HaloPreferences {
   static const _themeModeKey = 'theme_mode';
   static const _hapticsKey = 'haptics';
   static const _liveActivityKey = 'live_activity';
+  static const _autoPauseKey = 'auto_pause';
+  static const _autoPauseSecondsKey = 'auto_pause_seconds';
   static const _sleepScheduleKey = 'sleep_schedule';
   static const _sleepDismissedKey = 'sleep_dismissed';
   static const _weightGoalKey = 'weight_goal';
@@ -65,6 +67,29 @@ class HaloPreferences {
   Future<bool> readLiveActivity() => _readFlag(_liveActivityKey);
   Future<void> setLiveActivity(bool on) =>
       _db.writeValue(_liveActivityKey, '$on');
+
+  /// Workouts that move pause themselves when the moving stops. On unless
+  /// turned off.
+  Stream<bool> watchAutoPause() => _watchFlag(_autoPauseKey);
+  Future<void> setAutoPause(bool on) => _db.writeValue(_autoPauseKey, '$on');
+
+  /// How long without moving before a workout pauses itself.
+  Stream<int> watchAutoPauseSeconds() => _db
+      .watchValue(_autoPauseSecondsKey)
+      .map((raw) => int.tryParse(raw ?? '') ?? defaultAutoPauseSeconds);
+  Future<void> setAutoPauseSeconds(int seconds) =>
+      _db.writeValue(_autoPauseSecondsKey, '$seconds');
+
+  static const defaultAutoPauseSeconds = 30;
+
+  /// The auto-pause wait, or null when it is off.
+  Future<Duration?> readAutoPause() async {
+    if (!await _readFlag(_autoPauseKey)) return null;
+    final raw = await _db.readValue(_autoPauseSecondsKey);
+    return Duration(
+      seconds: int.tryParse(raw ?? '') ?? defaultAutoPauseSeconds,
+    );
+  }
 
   Stream<bool> _watchFlag(String key) =>
       _db.watchValue(key).map((raw) => raw != 'false').distinct();

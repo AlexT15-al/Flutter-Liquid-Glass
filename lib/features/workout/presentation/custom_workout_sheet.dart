@@ -62,6 +62,7 @@ Future<void> showCustomWorkoutStart(
 ) async {
   final controller = WorkoutScope.read(context);
   final profile = HaloScope.activityOf(context).profile;
+  final preferences = HaloScope.preferencesOf(context);
   final start = await showHaloSheet<bool>(
     context,
     builder: (context, scroll) =>
@@ -74,6 +75,7 @@ Future<void> showCustomWorkoutStart(
     goal: WorkoutGoal.open,
     profile: profile,
     custom: workout,
+    autoPause: await preferences.readAutoPause(),
   );
 }
 

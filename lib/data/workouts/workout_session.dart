@@ -32,8 +32,10 @@ class WorkoutSession extends ChangeNotifier {
     Stream<RoutePoint>? locations,
     this.locationAccess,
     CustomWorkout? custom,
+    Duration? autoPause,
     DateTime Function()? clock,
-  }) : _counter = stepCounter,
+  }) : autoPause = type.hasDistance ? autoPause : null,
+       _counter = stepCounter,
        _clock = clock ?? DateTime.now,
        intervals = custom == null ? null : IntervalTracker(custom) {
     _counter.addListener(_onSteps);
@@ -42,6 +44,26 @@ class WorkoutSession extends ChangeNotifier {
 
   final WorkoutType type;
   final WorkoutGoal goal;
+
+  /// How long without moving before the workout pauses itself; null when
+  /// it does not, as for one that does not move (strength, yoga).
+  final Duration? autoPause;
+
+  /// Paused by itself, not by the user: it resumes by itself too.
+  bool get autoPaused => _autoPaused && _phase == SessionPhase.paused;
+  bool _autoPaused = false;
+
+  /// The last time steps were counted or the route moved on.
+  DateTime? _lastMove;
+
+  /// While paused by itself: the steps since, and where it stopped, to
+  /// tell walking off again from shifting about.
+  int _stepsWhilePaused = 0;
+  RoutePoint? _pausedAt;
+
+  /// Steps, or metres, that mean moving again.
+  static const _resumeSteps = 6;
+  static const _resumeMetres = 15.0;
 
   /// For a custom workout, where it is in its intervals.
   final IntervalTracker? intervals;
@@ -154,6 +176,7 @@ class WorkoutSession extends ChangeNotifier {
     final now = _clock();
     _startedAt = now;
     _resumedAt = now;
+    _lastMove = now;
     _lastCount = _counter.value;
     _phase = SessionPhase.running;
     _startTicking();
@@ -162,6 +185,7 @@ class WorkoutSession extends ChangeNotifier {
 
   void pause() {
     if (_phase != SessionPhase.running) return;
+    _autoPaused = false;
     _banked = elapsed;
     _resumedAt = null;
     _phase = SessionPhase.paused;
@@ -171,7 +195,9 @@ class WorkoutSession extends ChangeNotifier {
 
   void resume() {
     if (_phase != SessionPhase.paused) return;
+    _autoPaused = false;
     _resumedAt = _clock();
+    _lastMove = _resumedAt;
     // Whatever was walked while paused is not bridged.
     if (_route.isNotEmpty) _segment++;
     // Steps taken while paused are not the workout's.
@@ -213,9 +239,39 @@ class WorkoutSession extends ChangeNotifier {
   void _startTicking() {
     _timer?.cancel();
     _timer = Timer.periodic(_tick, (_) {
+      _checkAutoPause();
       _advance();
       notifyListeners();
     });
+  }
+
+  /// Still for longer than [autoPause]: paused, as from when the moving
+  /// stopped, so the time stood still is not the workout's.
+  void _checkAutoPause() {
+    final wait = autoPause;
+    final last = _lastMove;
+    final resumed = _resumedAt;
+    if (wait == null || last == null || resumed == null) return;
+    if (_phase != SessionPhase.running) return;
+    final now = _clock();
+    if (now.difference(last) < wait) return;
+    final stoppedAt = last.isAfter(resumed) ? last : resumed;
+    _banked += stoppedAt.difference(resumed);
+    _resumedAt = null;
+    _phase = SessionPhase.paused;
+    _autoPaused = true;
+    _stepsWhilePaused = 0;
+    _pausedAt = _position;
+    _timer?.cancel();
+    notifyListeners();
+  }
+
+  /// Moving again after pausing by itself: carries on, counting the steps
+  /// that told it so.
+  void _autoResume() {
+    final steps = _stepsWhilePaused;
+    resume();
+    _steps += steps;
   }
 
   /// Moves the intervals on with the clock and the distance.
@@ -239,6 +295,15 @@ class WorkoutSession extends ChangeNotifier {
     if (_phase == SessionPhase.ended) return;
     _position = fix;
     if (_phase != SessionPhase.running) {
+      final from = _pausedAt;
+      if (autoPaused) {
+        if (from == null) {
+          _pausedAt = fix;
+        } else if (RouteMath.distanceM(from, fix) >= _resumeMetres) {
+          _autoResume();
+          return;
+        }
+      }
       notifyListeners();
       return;
     }
@@ -248,6 +313,7 @@ class WorkoutSession extends ChangeNotifier {
       final step = RouteMath.distanceM(last, stamped);
       if (step < _minStepM) return;
       _routeM += step;
+      _lastMove = _clock();
     }
     _route.add(stamped);
     _advance();
@@ -259,10 +325,18 @@ class WorkoutSession extends ChangeNotifier {
     if (count == null) return;
     final last = _lastCount;
     _lastCount = count;
-    if (_phase != SessionPhase.running || last == null) return;
+    if (last == null) return;
     // A lower total means the phone rebooted mid-workout; the new total is
     // all new steps.
-    _steps += count >= last ? count - last : count;
+    final added = count >= last ? count - last : count;
+    if (autoPaused) {
+      _stepsWhilePaused += added;
+      if (_stepsWhilePaused >= _resumeSteps) _autoResume();
+      return;
+    }
+    if (_phase != SessionPhase.running) return;
+    _steps += added;
+    if (added > 0) _lastMove = _clock();
   }
 
   @override

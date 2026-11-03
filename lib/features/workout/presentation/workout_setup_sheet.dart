@@ -16,6 +16,7 @@ import '../live/workout_controller.dart';
 Future<void> showWorkoutSetup(BuildContext context, WorkoutType type) async {
   final controller = WorkoutScope.read(context);
   final profile = HaloScope.activityOf(context).profile;
+  final preferences = HaloScope.preferencesOf(context);
 
   final goal = await showHaloSheet<WorkoutGoal>(
     context,
@@ -24,7 +25,12 @@ Future<void> showWorkoutSetup(BuildContext context, WorkoutType type) async {
   if (goal == null) return;
   // Notifications first, so the workout can show outside the app.
   await const LiveActivity().prepare();
-  await controller.start(type: type, goal: goal, profile: profile);
+  await controller.start(
+    type: type,
+    goal: goal,
+    profile: profile,
+    autoPause: await preferences.readAutoPause(),
+  );
 }
 
 class _SetupSheet extends StatefulWidget {
