@@ -103,7 +103,11 @@ abstract final class FoodSearch {
     }
     // A doubled letter is one: "moussaka" and "musaka", "gemista" and
     // "yemmista" spelled either way.
-    latin = latin.replaceAllMapped(RegExp(r'([a-z])\1+'), (m) => m[1]!);
+    // Only pairs: three of a letter is not a spelling, it is "zzz".
+    latin = latin.replaceAllMapped(
+      RegExp(r'([a-z])\1+'),
+      (m) => m[0]!.length == 2 ? m[1]! : m[0]!,
+    );
     return latin.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 

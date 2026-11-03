@@ -11,6 +11,7 @@ void main() {
     expect(finds('Sandwich Zorbas', 'zorbas sandwich'), isTrue);
     expect(finds('Sandwich Zorbas', 'zorb'), isTrue);
     expect(finds('Sandwich Zorbas', 'pizza'), isFalse);
+    expect(finds('Sandwich Zorbas', 'zzz'), isFalse);
   });
 
   test('Greek and Greeklish, with or without accents', () {
