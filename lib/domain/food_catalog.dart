@@ -1,5 +1,7 @@
 import 'nutrition.dart';
 
+part 'food_catalog_more.dart';
+
 /// What a food contains, for fasting days and preferences.
 enum FoodTag {
   /// Allowed on a strict Orthodox fast: no meat, fish, dairy or eggs.
@@ -71,7 +73,10 @@ const _egg = {FoodTag.egg};
 
 /// Foods to log by name and to plan weeks from, Greek kitchen first.
 abstract final class FoodCatalog {
-  static const all = <FoodItem>[
+  /// Every food: the ones the planner started with, and the rest.
+  static const all = <FoodItem>[..._core, ..._more];
+
+  static const _core = <FoodItem>[
     // ── Breakfast ──────────────────────────────────────────────────────────
     FoodItem(
       'Greek yogurt with honey and walnuts',
