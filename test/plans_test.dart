@@ -139,6 +139,45 @@ void main() {
       expect(total / 28, greaterThanOrEqualTo(losing.protein * 0.95));
     });
 
+    test('a big lunch makes the rest of the day lighter', () {
+      final full = MealPlanner.day(today, targets, const MealPlanSettings());
+      final dinnerBefore = full.firstWhere((m) => m.meal == Meal.dinner);
+      final adapted = MealPlanner.day(
+        today,
+        targets,
+        const MealPlanSettings(),
+        eaten: {
+          Meal.breakfast: const MealIntake(kcal: 500, protein: 25),
+          Meal.lunch: MealIntake(kcal: targets.kcal * 0.55, protein: 40),
+        },
+      );
+      // Only what is still to come is planned.
+      expect(adapted.map((m) => m.meal), [Meal.dinner, Meal.snack]);
+      final dinner = adapted.firstWhere((m) => m.meal == Meal.dinner);
+      expect(dinner.kcal, lessThan(dinnerBefore.kcal));
+      // The day still comes to about its calories.
+      final day =
+          500 +
+          targets.kcal * 0.55 +
+          adapted.fold<double>(0, (t, m) => t + m.kcal);
+      expect(day, closeTo(targets.kcal, targets.kcal * 0.15));
+    });
+
+    test('over budget, the meals left are light but still planned', () {
+      final adapted = MealPlanner.day(
+        today,
+        targets,
+        const MealPlanSettings(),
+        eaten: {
+          Meal.breakfast: MealIntake(kcal: targets.kcal * 1.2, protein: 30),
+        },
+      );
+      expect(adapted, hasLength(3));
+      final left = adapted.fold<double>(0, (t, m) => t + m.kcal);
+      // Half of their usual 75% of the day, near enough.
+      expect(left, closeTo(targets.kcal * 0.75 * 0.5, targets.kcal * 0.15));
+    });
+
     test('fasting days plan only lenten food', () {
       const settings = MealPlanSettings(fastingWeekdays: {3, 5});
       final wednesday = today.add(const Duration(days: 2));

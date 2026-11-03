@@ -63,6 +63,27 @@ class MealPlanSettings {
       );
 }
 
+/// What was eaten at a meal, logged.
+class MealIntake {
+  const MealIntake({required this.kcal, required this.protein});
+
+  final double kcal;
+  final double protein;
+
+  /// Each meal's total from a day's log.
+  static Map<Meal, MealIntake> of(Iterable<FoodEntry> entries) {
+    final out = <Meal, MealIntake>{};
+    for (final e in entries) {
+      final was = out[e.meal];
+      out[e.meal] = MealIntake(
+        kcal: (was?.kcal ?? 0) + (e.kcal ?? 0),
+        protein: (was?.protein ?? 0) + (e.protein ?? 0),
+      );
+    }
+    return out;
+  }
+}
+
 /// One planned meal: a food and how much of it.
 class PlannedMeal {
   const PlannedMeal({
@@ -101,27 +122,45 @@ abstract final class MealPlanner {
     Meal.snack: 0.10,
   };
 
+  /// The day's plan for the meals not eaten yet.
+  ///
+  /// [eaten] is what was logged for each meal so far: those meals are done,
+  /// and what they came to counts against the day. The meals still to come
+  /// share what is left of [budget] (the target, or with today's activity
+  /// added) and of the protein, in their usual proportions; a big lunch
+  /// makes a lighter dinner, a skipped breakfast a fuller one, but no meal
+  /// grows past 1.4 times its usual size. Over budget already, they are
+  /// kept light (half their usual size), never dropped.
   static List<PlannedMeal> day(
     DateTime date,
     NutritionTargets targets,
-    MealPlanSettings settings,
-  ) {
+    MealPlanSettings settings, {
+    Map<Meal, MealIntake> eaten = const {},
+    double? budget,
+  }) {
     final fasting = settings.fasting(date);
+    final total = budget ?? targets.kcal.toDouble();
+    final open = [
+      for (final m in Meal.values)
+        if (!eaten.containsKey(m)) m,
+    ];
+    final openShare = open.fold(0.0, (t, m) => t + shares[m]!);
+    if (open.isEmpty || openShare <= 0) return const [];
+    final eatenKcal = eaten.values.fold(0.0, (t, e) => t + e.kcal);
+    final eatenProtein = eaten.values.fold(0.0, (t, e) => t + e.protein);
+    final kcalLeft = math.max(total - eatenKcal, total * openShare * 0.5);
+
     final planned = <PlannedMeal>[];
-    var protein = 0.0;
-    var shareLeft = 1.0;
-    for (final meal in Meal.values) {
+    var protein = eatenProtein;
+    var shareLeft = openShare;
+    for (final meal in open) {
       final share = shares[meal]!;
       // This meal's part of the protein still to come.
-      final need = (targets.protein - protein) * share / shareLeft;
-      final pick = _pick(
-        date,
-        meal,
-        targets.kcal * share,
-        need,
-        fasting,
-        settings,
-      );
+      final need = math.max(0.0, targets.protein - protein) * share / shareLeft;
+      // Never more than 1.4 times a meal's usual size: what is left beyond
+      // that is better not eaten than eaten as a double dinner.
+      final kcal = math.min(kcalLeft * share / openShare, total * share * 1.4);
+      final pick = _pick(date, meal, kcal, need, fasting, settings);
       planned.add(pick);
       protein += pick.protein;
       shareLeft -= share;

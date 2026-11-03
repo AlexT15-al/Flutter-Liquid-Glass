@@ -38,6 +38,19 @@ class _PlansTabState extends State<PlansTab> {
   Stream<WeightGoal>? _goal;
   Stream<List<SetLog>>? _history;
 
+  /// What was logged on the day shown, which the meals still to come adapt
+  /// to; followed again when another day is picked.
+  Stream<List<FoodEntry>>? _food;
+  DateTime? _foodDay;
+
+  Stream<List<FoodEntry>> _foodOn(DateTime day) {
+    if (_food == null || _foodDay != day) {
+      _foodDay = day;
+      _food = HaloScope.nutritionOf(context).watchFoodOn(day);
+    }
+    return _food!;
+  }
+
   static DateTime _today() {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
@@ -134,7 +147,20 @@ class _PlansTabState extends State<PlansTab> {
               ),
               const SizedBox(height: HaloMetrics.cardGap + 4),
               if (_view == 0)
-                ..._mealsView(context, body, goal, meals)
+                StreamBuilder<List<FoodEntry>>(
+                  stream: _foodOn(_day),
+                  initialData: const [],
+                  builder: (context, food) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _mealsView(
+                      context,
+                      body,
+                      goal,
+                      meals,
+                      food.data ?? const [],
+                    ),
+                  ),
+                )
               else
                 ..._trainingView(context, body, goal, training, history),
             ],
@@ -151,11 +177,31 @@ class _PlansTabState extends State<PlansTab> {
     BodyProfile body,
     WeightGoal goal,
     MealPlanSettings settings,
+    List<FoodEntry> food,
   ) {
     final targets = NutritionTargets.of(body, goal, today: _day);
-    final plan = MealPlanner.day(_day, targets, settings);
-    final kcal = plan.fold<double>(0, (t, m) => t + m.kcal);
-    final protein = plan.fold<double>(0, (t, m) => t + m.protein);
+    final eaten = MealIntake.of(food);
+    // Today counts the movement so far, as the Nutrition tab does.
+    final budget = _day == _today()
+        ? targets
+              .budget(HaloScope.activityOf(context).today.activeKcal)
+              .toDouble()
+        : targets.kcal.toDouble();
+    final plan = MealPlanner.day(
+      _day,
+      targets,
+      settings,
+      eaten: eaten,
+      budget: budget,
+    );
+    final eatenKcal = eaten.values.fold<double>(0, (t, e) => t + e.kcal);
+    final kcal = eatenKcal + plan.fold<double>(0, (t, m) => t + m.kcal);
+    final protein =
+        eaten.values.fold<double>(0, (t, e) => t + e.protein) +
+        plan.fold<double>(0, (t, m) => t + m.protein);
+    final over = eaten.isNotEmpty && kcal > budget * 1.05;
+    // Room the plan leaves, when the meals left could not take it all.
+    final spare = budget - kcal;
     final fasting = settings.fasting(_day);
     final preferences = HaloScope.preferencesOf(context);
 
@@ -182,7 +228,7 @@ class _PlansTabState extends State<PlansTab> {
                     ),
                   ),
                   Text(
-                    '${Format.integer(kcal)} of ${Format.integer(targets.kcal)} kcal'
+                    '${Format.integer(kcal)} of ${Format.integer(budget)} kcal'
                     ' · ${protein.round()} g protein',
                     style: TextStyle(
                       color: HaloColors.secondaryLabelOf(context),
@@ -198,17 +244,40 @@ class _PlansTabState extends State<PlansTab> {
         ),
       ),
       const SizedBox(height: HaloMetrics.cardGap),
-      for (final planned in plan) ...[
-        _PlannedMealCard(
-          planned: planned,
-          day: _day,
-          onSwap: () {
-            HapticFeedback.selectionClick();
-            preferences.setMealPlan(settings.swapped(_day, planned.meal));
-          },
+      if (eaten.isNotEmpty)
+        GroupCaption(
+          over
+              ? 'Over today’s calories already: the meals left are kept light.'
+              : 'The meals left are resized to what you have eaten: '
+                    '${Format.integer(eatenKcal)} kcal so far.'
+                    '${spare > 150 ? ' About ${Format.integer(spare)} kcal '
+                              'more is room for a snack, if hungry.' : ''}',
+          footer: true,
         ),
-        const SizedBox(height: HaloMetrics.cardGap),
-      ],
+      if (eaten.isNotEmpty) const SizedBox(height: 8),
+      for (final meal in Meal.values)
+        if (eaten[meal] case final intake?) ...[
+          _LoggedMealCard(
+            meal: meal,
+            intake: intake,
+            names: [
+              for (final e in food)
+                if (e.meal == meal) e.name,
+            ],
+          ),
+          const SizedBox(height: HaloMetrics.cardGap),
+        ] else if (plan.where((p) => p.meal == meal).firstOrNull
+            case final planned?) ...[
+          _PlannedMealCard(
+            planned: planned,
+            day: _day,
+            onSwap: () {
+              HapticFeedback.selectionClick();
+              preferences.setMealPlan(settings.swapped(_day, planned.meal));
+            },
+          ),
+          const SizedBox(height: HaloMetrics.cardGap),
+        ],
       const SizedBox(height: HaloMetrics.sectionTopGap - HaloMetrics.cardGap),
       GroupedCard(
         children: [
@@ -484,6 +553,71 @@ class _WeekStrip extends StatelessWidget {
             }(),
           ),
       ],
+    );
+  }
+}
+
+/// A meal already eaten: what was logged, and what it came to.
+class _LoggedMealCard extends StatelessWidget {
+  const _LoggedMealCard({
+    required this.meal,
+    required this.intake,
+    required this.names,
+  });
+
+  final Meal meal;
+  final MealIntake intake;
+  final List<String> names;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondary = HaloColors.secondaryLabelOf(context);
+    final accent = HaloColors.accent.resolveFrom(context);
+    return HaloCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${meal.title.toUpperCase()} · EATEN',
+                  style: TextStyle(
+                    color: secondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  names.join(', '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: HaloColors.labelOf(context),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${Format.integer(intake.kcal)} kcal · '
+                  '${intake.protein.round()} g protein',
+                  style: TextStyle(color: secondary, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withValues(alpha: 0.16),
+            ),
+            child: Icon(CupertinoIcons.checkmark, size: 18, color: accent),
+          ),
+        ],
+      ),
     );
   }
 }
