@@ -30,6 +30,7 @@ import 'widgets/activity_card.dart';
 import 'widgets/metric_tile.dart';
 import 'widgets/readiness_card.dart';
 import 'widgets/step_access_card.dart';
+import 'widgets/walk_prompt.dart';
 
 /// The Today tab: the day at a glance.
 ///
@@ -115,6 +116,7 @@ class _TodayTabState extends State<TodayTab> {
                 goals: activity.goals,
                 onTap: () => Navigator.of(context).push(ActivityPage.route()),
               ),
+              WalkPrompt(activity: activity),
               if (access != StepAccess.granted) ...[
                 const SizedBox(height: HaloMetrics.cardGap),
                 StepAccessCard(access: access, onAllow: onAllow),

@@ -61,6 +61,11 @@ class ActivityStore extends ChangeNotifier {
   ActivityGoals get goals => _goals;
   BodyProfile get profile => _profile;
 
+  /// The week's step spans as stored, and the workouts over them: what
+  /// walks are found in.
+  List<StepSpan> get spans => List.unmodifiable(_spans);
+  List<WorkoutRecord> get workoutRecords => _workoutRecords;
+
   /// Reads the week from storage and follows the profile and goals.
   Future<void> load() async {
     final now = _clock();

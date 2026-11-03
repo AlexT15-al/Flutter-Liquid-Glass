@@ -30,6 +30,9 @@ class HaloPreferences {
   static const _hapticsKey = 'haptics';
   static const _liveActivityKey = 'live_activity';
   static const _autoPauseKey = 'auto_pause';
+  static const _detectWalksKey = 'detect_walks';
+  static const _detectWalkMinutesKey = 'detect_walk_minutes';
+  static const _dismissedWalksKey = 'dismissed_walks';
   static const _autoPauseSecondsKey = 'auto_pause_seconds';
   static const _sleepScheduleKey = 'sleep_schedule';
   static const _sleepDismissedKey = 'sleep_dismissed';
@@ -88,6 +91,43 @@ class HaloPreferences {
     final raw = await _db.readValue(_autoPauseSecondsKey);
     return Duration(
       seconds: int.tryParse(raw ?? '') ?? defaultAutoPauseSeconds,
+    );
+  }
+
+  /// Walks found in the steps, offered to be saved as workouts. On unless
+  /// turned off.
+  Stream<bool> watchDetectWalks() => _watchFlag(_detectWalksKey);
+  Future<void> setDetectWalks(bool on) =>
+      _db.writeValue(_detectWalksKey, '$on');
+
+  /// How long a walk has to last to be offered.
+  Stream<int> watchDetectWalkMinutes() => _db
+      .watchValue(_detectWalkMinutesKey)
+      .map((raw) => int.tryParse(raw ?? '') ?? defaultDetectWalkMinutes);
+  Future<void> setDetectWalkMinutes(int minutes) =>
+      _db.writeValue(_detectWalkMinutesKey, '$minutes');
+
+  static const defaultDetectWalkMinutes = 10;
+
+  /// Walks found and dismissed, by their start minute.
+  Stream<Set<int>> watchDismissedWalks() => _db
+      .watchValue(_dismissedWalksKey)
+      .map(
+        (raw) => raw == null
+            ? <int>{}
+            : {for (final v in jsonDecode(raw) as List) (v as num).toInt()},
+      );
+
+  Future<void> dismissWalk(int key) async {
+    final raw = await _db.readValue(_dismissedWalksKey);
+    final keys = raw == null
+        ? <int>[]
+        : [for (final v in jsonDecode(raw) as List) (v as num).toInt()];
+    // The last fifty are plenty: walks are only offered for a day.
+    final next = [...keys, key];
+    await _db.writeValue(
+      _dismissedWalksKey,
+      jsonEncode(next.length > 50 ? next.sublist(next.length - 50) : next),
     );
   }
 

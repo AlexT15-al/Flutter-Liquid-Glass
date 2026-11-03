@@ -80,6 +80,12 @@ class SettingsPage extends StatelessWidget {
                 set: preferences.setAutoPause,
               ),
               const _AutoPauseRow(),
+              _FlagRow(
+                title: 'Detect Walks',
+                watch: preferences.watchDetectWalks,
+                set: preferences.setDetectWalks,
+              ),
+              const _WalkLengthRow(),
             ],
           ),
           const GroupCaption(
@@ -88,7 +94,8 @@ class SettingsPage extends StatelessWidget {
             'workouts on Android still show a small notification while they '
             'record the route. Auto-Pause pauses a walk, run, hike or ride '
             'when you stop moving for the time chosen, and carries on when '
-            'you set off again.',
+            'you set off again. Detect Walks finds walks at a steady pace in '
+            'your steps and offers to save them as workouts on Today.',
             footer: true,
           ),
           const SizedBox(height: HaloMetrics.sectionTopGap),
@@ -345,6 +352,76 @@ class _AutoPauseRowState extends State<_AutoPauseRow> {
                       Center(
                         child: Text(
                           _label(s),
+                          style: TextStyle(
+                            color: HaloColors.labelOf(context),
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// How long a walk has to last to be offered as a workout.
+class _WalkLengthRow extends StatefulWidget {
+  const _WalkLengthRow();
+
+  @override
+  State<_WalkLengthRow> createState() => _WalkLengthRowState();
+}
+
+class _WalkLengthRowState extends State<_WalkLengthRow> {
+  static const _options = [5, 10, 15, 20, 30];
+
+  Stream<int>? _minutes;
+  Stream<bool>? _on;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final preferences = HaloScope.preferencesOf(context);
+    _minutes ??= preferences.watchDetectWalkMinutes();
+    _on ??= preferences.watchDetectWalks();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final preferences = HaloScope.preferencesOf(context);
+    return StreamBuilder<bool>(
+      stream: _on,
+      initialData: true,
+      builder: (context, on) {
+        if (on.data == false) return const SizedBox.shrink();
+        return StreamBuilder<int>(
+          stream: _minutes,
+          initialData: HaloPreferences.defaultDetectWalkMinutes,
+          builder: (context, snapshot) {
+            final minutes =
+                snapshot.data ?? HaloPreferences.defaultDetectWalkMinutes;
+            final index = _options.indexOf(minutes);
+            return GroupedRow(
+              title: 'Shortest Walk',
+              value: '$minutes min',
+              editor: RowWheel(
+                child: CupertinoPicker(
+                  scrollController: FixedExtentScrollController(
+                    initialItem: index < 0 ? 1 : index,
+                  ),
+                  itemExtent: 36,
+                  onSelectedItemChanged: (i) =>
+                      preferences.setDetectWalkMinutes(_options[i]),
+                  children: [
+                    for (final m in _options)
+                      Center(
+                        child: Text(
+                          '$m min',
                           style: TextStyle(
                             color: HaloColors.labelOf(context),
                             fontSize: 20,
