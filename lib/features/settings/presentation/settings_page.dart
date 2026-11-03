@@ -21,6 +21,7 @@ import '../../../shared/widgets/halo_page.dart';
 import '../../goals/presentation/goals_page.dart';
 import '../../profile/presentation/profile_page.dart';
 import 'notifications_page.dart';
+import 'now_bar_test_page.dart';
 
 /// Settings, reached from the account menu.
 class SettingsPage extends StatelessWidget {
@@ -86,6 +87,10 @@ class SettingsPage extends StatelessWidget {
                 set: preferences.setDetectWalks,
               ),
               const _WalkLengthRow(),
+              GroupedRow(
+                title: 'Now Bar Test',
+                onTap: () => Navigator.of(context).push(NowBarTestPage.route()),
+              ),
             ],
           ),
           const GroupCaption(

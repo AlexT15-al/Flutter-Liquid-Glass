@@ -50,7 +50,32 @@ object LiveActivityChannel {
                 end(context)
                 result.success(null)
             }
+            "test" -> {
+                val manager = context.getSystemService(NotificationManager::class.java)
+                val variant = (call.arguments as? Number)?.toInt() ?: 0
+                if (variant == 0) {
+                    manager?.cancel(WorkoutNotification.TEST_ID)
+                } else {
+                    manager?.notify(
+                        WorkoutNotification.TEST_ID,
+                        WorkoutNotification.test(context, variant),
+                    )
+                }
+                result.success(promoted(manager))
+            }
             else -> result.notImplemented()
+        }
+    }
+
+    /** Whether Android lets this app's notifications be promoted at all. */
+    private fun promoted(manager: NotificationManager?): String {
+        if (manager == null || Build.VERSION.SDK_INT < 36) return "n/a"
+        return try {
+            val allowed = manager.javaClass.getMethod("canPostPromotedNotifications")
+                .invoke(manager) as Boolean
+            if (allowed) "allowed" else "not allowed"
+        } catch (_: Exception) {
+            "unknown"
         }
     }
 

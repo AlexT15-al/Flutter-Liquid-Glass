@@ -245,6 +245,84 @@ object WorkoutNotification {
         }
     }
 
+    /** The test notifications' id, apart from the real workout's. */
+    const val TEST_ID = 7399
+
+    /**
+     * A test for the Now Bar: the same notification as the navigation app
+     * that reaches it, changing one thing at a time, to find what One UI
+     * keeps out.
+     *
+     * 1. As the navigation app: category navigation, no buttons, a fixed
+     *    short text, a two-part bar with points.
+     * 2. The same, as a workout.
+     * 3. The same, as a stopwatch.
+     * 4. Halo's way: a workout with Pause and the running time.
+     */
+    fun test(context: Context, variant: Int): Notification {
+        ensureChannel(context)
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(context, CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(context)
+        }
+        val category = when (variant) {
+            1 -> Notification.CATEGORY_NAVIGATION
+            3 -> Notification.CATEGORY_STOPWATCH
+            else -> Notification.CATEGORY_WORKOUT
+        }
+        builder
+            .setSmallIcon(R.drawable.ic_stat_halo)
+            .setContentTitle("Now Bar test $variant")
+            .setContentText("2.41 km · 186 kcal")
+            .setContentIntent(activityIntent(context))
+            .setOngoing(true)
+            .setCategory(category)
+        if (variant == 4) {
+            builder
+                .setOnlyAlertOnce(true)
+                .setColor(ACCENT)
+                .setWhen(System.currentTimeMillis() - 5 * 60_000L)
+                .setShowWhen(true)
+                .setUsesChronometer(true)
+                .addAction(pauseAction(context, false))
+        } else {
+            builder.setShowWhen(false)
+        }
+        if (Build.VERSION.SDK_INT >= 36) {
+            builder.setStyle(
+                Notification.ProgressStyle()
+                    .setProgressSegments(
+                        listOf(
+                            Notification.ProgressStyle.Segment(40).setColor(ACCENT),
+                            Notification.ProgressStyle.Segment(60)
+                                .setColor(0xFF3A3A3A.toInt()),
+                        ),
+                    )
+                    .setProgressPoints(
+                        listOf(
+                            Notification.ProgressStyle.Point(40).setColor(ACCENT),
+                            Notification.ProgressStyle.Point(100).setColor(ACCENT),
+                        ),
+                    )
+                    .setProgress(40),
+            )
+            builder.addExtras(Bundle().apply { putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true) })
+            for ((name, type, value) in listOf(
+                Triple("setRequestPromotedOngoing", Boolean::class.javaPrimitiveType, true),
+                Triple("setShortCriticalText", String::class.java, "2.41 km"),
+            )) {
+                if (variant == 4 && name == "setShortCriticalText") continue
+                try {
+                    builder.javaClass.getMethod(name, type).invoke(builder, value)
+                } catch (_: Exception) {
+                }
+            }
+        }
+        return builder.build()
+    }
+
     private fun activityIntent(context: Context): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .setAction(ACTION_OPEN)
