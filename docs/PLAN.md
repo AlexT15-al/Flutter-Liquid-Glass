@@ -189,6 +189,13 @@ Backup/Export/Import, Σχετικά.
 
 ### Άλλα που έμειναν για μετά
 
-- **Now Bar της Samsung για την προπόνηση:** χρειάζεται τον κώδικα της live notification
-  από το app πλοήγησης.
+- **Now Bar της Samsung για την προπόνηση:** αφέθηκε. Η προπόνηση βγαίνει σωστά ως Live
+  Update (live notification με progress), αλλά το One UI δεν την ανεβάζει στο Now Bar.
+  Δοκιμάστηκαν χωρίς αποτέλεσμα: meta-data `com.samsung.android.support.ongoing_activity`,
+  κανάλι DEFAULT, ProgressStyle πάντα, short critical text, notify μετά το startForeground,
+  κατηγορίες navigation / workout / stopwatch, χωρίς κουμπιά και χρονόμετρο, ο κώδικας του
+  app πλοήγησης αυτούσιος (NotificationCompat 1.17) από foreground service. Το app πλοήγησης
+  του χρήστη φτάνει στο Now Bar με τον ίδιο κώδικα, άρα η διαφορά είναι εκτός ειδοποίησης
+  (πιθανώς κάτι που η Samsung αναγνωρίζει για το συγκεκριμένο app, π.χ. Android Auto /
+  navigation category στο manifest).
 - **Ειδοποιήσεις σε iOS:** σήμερα υπάρχουν μόνο σε Android.

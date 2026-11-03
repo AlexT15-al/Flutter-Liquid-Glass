@@ -47,9 +47,3 @@ kotlin {
 flutter {
     source = "../.."
 }
-
-dependencies {
-    // NotificationCompat 1.17: Android 16 Live Updates (setRequestPromotedOngoing,
-    // setShortCriticalText, ProgressStyle) the way the Now Bar takes them.
-    implementation("androidx.core:core-ktx:1.17.0")
-}

@@ -116,18 +116,6 @@ class LiveActivity {
 
   Future<void> end() => _invoke('end');
 
-  /// Posts Now Bar test notification [variant] (1 to 4), or takes it down
-  /// with 0; says whether Android allows the app promoted notifications.
-  Future<String> test(int variant) async {
-    try {
-      return await _channel.invokeMethod<String>('test', variant) ?? 'n/a';
-    } on MissingPluginException {
-      return 'n/a';
-    } on PlatformException catch (error) {
-      return error.message ?? 'error';
-    }
-  }
-
   Future<void> _invoke(String method, [Object? arguments]) async {
     try {
       await _channel.invokeMethod<void>(method, arguments);
