@@ -5,12 +5,14 @@ import '../../../app/halo_scope.dart';
 import '../../../app/theme/halo_colors.dart';
 import '../../../app/theme/halo_metrics.dart';
 import '../../../domain/training.dart';
+import '../../../domain/warm_up.dart';
 import '../../../domain/workout.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/glass_action_button.dart';
 import '../../../shared/widgets/halo_card.dart';
 import '../../../shared/widgets/halo_page.dart';
 import 'rest_timer.dart';
+import 'swap_sheet.dart';
 
 /// A planned session: what to do, and, once started, every set ticked off
 /// with its reps and load. Saved, the sets drive next time's plan, and the
@@ -41,10 +43,54 @@ class _Set {
 
 class _SessionPageState extends State<SessionPage> {
   DateTime? _started;
+
+  /// The session as planned, again after an exercise is swapped.
+  late PlannedSession _session = widget.session;
+
   late final List<List<_Set>> _sets = [
-    for (final e in widget.session.exercises)
-      [for (var i = 0; i < e.sets; i++) _Set(reps: e.min, kg: e.kg)],
+    for (final e in _session.exercises) _setsFor(e),
   ];
+
+  static List<_Set> _setsFor(PlannedExercise e) => [
+    for (var i = 0; i < e.sets; i++) _Set(reps: e.min, kg: e.kg),
+  ];
+
+  /// Warm-up moves ticked off, by index.
+  final Set<int> _warmedUp = {};
+
+  /// Swaps exercise [index] for another that trains the same movement, or
+  /// puts the plan's own choice back; kept for every session after.
+  Future<void> _swap(int index) async {
+    final planned = _session.exercises[index];
+    final choice = await showSwapSheet(context, planned);
+    if (choice == null || !mounted) return;
+    final preferences = HaloScope.preferencesOf(context);
+    final body = HaloScope.activityOf(context).profile;
+    final training = HaloScope.trainingOf(context);
+    final profile =
+        await preferences.watchTraining().first ?? const TrainingProfile();
+    final next = profile.swapped(planned.slot, choice.id);
+    await preferences.setTraining(next);
+    final goal = await preferences.watchWeightGoal().first;
+    final history = await training.watchHistory().first;
+    final week = TrainingPlanner.week(
+      training: next,
+      body: body,
+      goal: goal,
+      history: history,
+    );
+    final session = week
+        .where((s) => s.weekday == _session.weekday)
+        .firstOrNull;
+    if (session == null || !mounted) return;
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _session = session;
+      if (index < session.exercises.length) {
+        _sets[index] = _setsFor(session.exercises[index]);
+      }
+    });
+  }
 
   /// The rest under way: when it ends, how long it was, and what is next.
   DateTime? _restEnd;
@@ -64,12 +110,11 @@ class _SessionPageState extends State<SessionPage> {
     final (index, set) = next;
     // Rest for the exercise just finished: the heavy lift needs it, not the
     // one that comes after.
-    final rest = widget.session.exercises[exercise].exercise.rest;
+    final rest = _session.exercises[exercise].exercise.rest;
     setState(() {
       _restTotal = rest;
       _restEnd = DateTime.now().add(rest);
-      _restNext =
-          'Set ${set + 1} · ${widget.session.exercises[index].exercise.name}';
+      _restNext = 'Set ${set + 1} · ${_session.exercises[index].exercise.name}';
     });
   }
 
@@ -108,7 +153,7 @@ class _SessionPageState extends State<SessionPage> {
           if (s.done)
             SetLog(
               time: started,
-              exerciseId: widget.session.exercises[i].exercise.id,
+              exerciseId: _session.exercises[i].exercise.id,
               reps: s.reps,
               kg: s.kg,
             ),
@@ -144,7 +189,7 @@ class _SessionPageState extends State<SessionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final session = widget.session;
+    final session = _session;
     final logging = _started != null;
     final restEnd = _restEnd;
     final bottom = HaloMetrics.bottomInset(context);
@@ -166,8 +211,25 @@ class _SessionPageState extends State<SessionPage> {
           ),
         ),
         const SizedBox(height: HaloMetrics.cardGap),
+        _WarmUpCard(
+          moves: WarmUp.general(
+            session,
+            session.exercises.firstOrNull?.exercise.place ?? TrainingPlace.gym,
+          ),
+          done: _warmedUp,
+          onToggle: (i) => setState(() {
+            HapticFeedback.selectionClick();
+            if (!_warmedUp.remove(i)) _warmedUp.add(i);
+          }),
+        ),
+        const SizedBox(height: HaloMetrics.cardGap),
         for (var i = 0; i < session.exercises.length; i++) ...[
           _ExerciseCard(
+            key: ValueKey(
+              '${session.exercises[i].slot}:'
+              '${session.exercises[i].exercise.id}',
+            ),
+            onSwap: () => _swap(i),
             planned: session.exercises[i],
             sets: _sets[i],
             logging: logging,
@@ -231,13 +293,15 @@ class _SessionPageState extends State<SessionPage> {
   }
 }
 
-class _ExerciseCard extends StatelessWidget {
+class _ExerciseCard extends StatefulWidget {
   const _ExerciseCard({
+    super.key,
     required this.planned,
     required this.sets,
     required this.logging,
     required this.onChanged,
     required this.onDone,
+    required this.onSwap,
   });
 
   final PlannedExercise planned;
@@ -248,9 +312,30 @@ class _ExerciseCard extends StatelessWidget {
   /// A set was ticked off.
   final VoidCallback onDone;
 
+  final VoidCallback onSwap;
+
+  @override
+  State<_ExerciseCard> createState() => _ExerciseCardState();
+}
+
+class _ExerciseCardState extends State<_ExerciseCard> {
+  /// Warm-up sets ticked off: not logged, they do not count as work.
+  final Set<int> _warmed = {};
+
   @override
   Widget build(BuildContext context) {
+    final planned = widget.planned;
+    final sets = widget.sets;
+    final logging = widget.logging;
+    final onChanged = widget.onChanged;
+    final onDone = widget.onDone;
     final exercise = planned.exercise;
+    final kgStep = exercise.dumbbell
+        ? 2.0
+        : exercise.lower
+        ? 5.0
+        : 2.5;
+    final warmUp = WarmUp.sets(planned, step: kgStep);
     final secondary = HaloColors.secondaryLabelOf(context);
     final change = planned.change;
     final seconds = exercise.measure == Measure.seconds;
@@ -282,6 +367,29 @@ class _ExerciseCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+              const SizedBox(width: 6),
+              Semantics(
+                button: true,
+                label: 'Swap ${exercise.name}',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onSwap,
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: HaloColors.fill.resolveFrom(context),
+                    ),
+                    child: Icon(
+                      CupertinoIcons.arrow_2_circlepath,
+                      size: 16,
+                      color: HaloColors.labelOf(context),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           Text(
@@ -298,19 +406,38 @@ class _ExerciseCard extends StatelessWidget {
               exercise.cue,
               style: TextStyle(color: secondary, fontSize: 14),
             ),
+          if (planned.swapped)
+            Text(
+              'Your choice',
+              style: TextStyle(color: secondary, fontSize: 13),
+            ),
+          if (warmUp.isNotEmpty && !logging)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Warm-up: ${warmUp.map((w) => '${w.reps} × '
+                    '${Format.decimal(w.kg)} kg').join(' · ')}',
+                style: TextStyle(color: secondary, fontSize: 13),
+              ),
+            ),
           if (logging) ...[
             const SizedBox(height: 10),
+            for (var i = 0; i < warmUp.length; i++)
+              _WarmUpSetRow(
+                set: warmUp[i],
+                done: _warmed.contains(i),
+                onTap: () => setState(() {
+                  HapticFeedback.selectionClick();
+                  if (!_warmed.remove(i)) _warmed.add(i);
+                }),
+              ),
             for (var i = 0; i < sets.length; i++)
               _SetRow(
                 index: i,
                 set: sets[i],
                 unit: seconds ? 's' : 'reps',
                 step: seconds ? 5 : 1,
-                kgStep: exercise.dumbbell
-                    ? 2
-                    : exercise.lower
-                    ? 5
-                    : 2.5,
+                kgStep: kgStep,
                 onChanged: onChanged,
                 onDone: onDone,
               ),
@@ -480,6 +607,159 @@ class _Stepper extends StatelessWidget {
             ),
           ),
           button(CupertinoIcons.plus, onPlus),
+        ],
+      ),
+    );
+  }
+}
+
+/// The general warm-up: a few minutes, each move ticked off.
+class _WarmUpCard extends StatelessWidget {
+  const _WarmUpCard({
+    required this.moves,
+    required this.done,
+    required this.onToggle,
+  });
+
+  final List<WarmUpMove> moves;
+  final Set<int> done;
+  final ValueChanged<int> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = CupertinoColors.systemOrange.resolveFrom(context);
+    final secondary = HaloColors.secondaryLabelOf(context);
+    return HaloCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(CupertinoIcons.flame, size: 16, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Warm-Up',
+                  style: TextStyle(
+                    color: HaloColors.labelOf(context),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${done.length} of ${moves.length}',
+                style: TextStyle(color: secondary, fontSize: 13),
+              ),
+            ],
+          ),
+          Text(
+            'About 6 minutes, to get warm and loosen what is about to work.',
+            style: TextStyle(color: secondary, fontSize: 14),
+          ),
+          const SizedBox(height: 6),
+          for (var i = 0; i < moves.length; i++)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onToggle(i),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      done.contains(i)
+                          ? CupertinoIcons.checkmark_circle_fill
+                          : CupertinoIcons.circle,
+                      size: 22,
+                      color: done.contains(i) ? color : secondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        moves[i].name,
+                        style: TextStyle(
+                          color: HaloColors.labelOf(context),
+                          fontSize: 15,
+                          decoration: done.contains(i)
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      moves[i].amount,
+                      style: TextStyle(color: secondary, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A warm-up set: lighter, marked W, ticked off but never logged.
+class _WarmUpSetRow extends StatelessWidget {
+  const _WarmUpSetRow({
+    required this.set,
+    required this.done,
+    required this.onTap,
+  });
+
+  final WarmUpSet set;
+  final bool done;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = CupertinoColors.systemOrange.resolveFrom(context);
+    final secondary = HaloColors.secondaryLabelOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              'W',
+              style: TextStyle(
+                color: color,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '${set.reps} reps · ${Format.decimal(set.kg)} kg',
+              style: TextStyle(
+                color: secondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: done ? color : color.withValues(alpha: 0.16),
+              ),
+              child: Icon(
+                CupertinoIcons.checkmark_alt,
+                size: 17,
+                color: done ? const Color(0xFFFFFFFF) : color,
+              ),
+            ),
+          ),
+          const SizedBox(width: 3),
         ],
       ),
     );

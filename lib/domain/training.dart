@@ -33,6 +33,7 @@ class TrainingProfile {
     this.place = TrainingPlace.gym,
     this.level = TrainingLevel.beginner,
     this.weekdays = const {1, 3, 5},
+    this.swaps = const {},
   });
 
   final TrainingPlace place;
@@ -41,14 +42,29 @@ class TrainingProfile {
   /// 1 Monday … 7 Sunday.
   final Set<int> weekdays;
 
+  /// Exercises the user swapped in, by the plan's slot
+  /// ([PlannedExercise.slot]): one not liked, or without the kit for it.
+  final Map<String, String> swaps;
+
   TrainingProfile copyWith({
     TrainingPlace? place,
     TrainingLevel? level,
     Set<int>? weekdays,
+    Map<String, String>? swaps,
   }) => TrainingProfile(
     place: place ?? this.place,
     level: level ?? this.level,
     weekdays: weekdays ?? this.weekdays,
+    swaps: swaps ?? this.swaps,
+  );
+
+  /// With [exerciseId] in [slot]; null puts the plan's own choice back.
+  TrainingProfile swapped(String slot, String? exerciseId) => copyWith(
+    swaps: {
+      for (final e in swaps.entries)
+        if (e.key != slot) e.key: e.value,
+      slot: ?exerciseId,
+    },
   );
 
   /// Sensible days for a number of sessions a week.
@@ -64,6 +80,7 @@ class TrainingProfile {
     'place': place.name,
     'level': level.name,
     'days': (weekdays.toList()..sort()),
+    'swaps': swaps,
   };
 
   static TrainingProfile fromJson(Map<String, Object?> json) => TrainingProfile(
@@ -74,6 +91,10 @@ class TrainingProfile {
     weekdays: {
       for (final d in (json['days'] as List?) ?? const [1, 3, 5])
         (d as num).toInt(),
+    },
+    swaps: {
+      for (final e in ((json['swaps'] as Map?) ?? const {}).entries)
+        e.key as String: e.value as String,
     },
   );
 }
@@ -337,6 +358,220 @@ abstract final class ExerciseCatalog {
       place: TrainingPlace.gym,
       measure: Measure.seconds,
       cue: 'Ribs down, squeeze the glutes.',
+    ),
+    // Alternatives, for swapping one in: other kit, or none.
+    Exercise(
+      'front_squat',
+      'Barbell Front Squat',
+      Pattern.squat,
+      place: TrainingPlace.gym,
+      ratio: 0.4,
+      lower: true,
+      cue: 'Elbows high, sit straight down.',
+    ),
+    Exercise(
+      'hack_squat',
+      'Hack Squat Machine',
+      Pattern.squat,
+      place: TrainingPlace.gym,
+      ratio: 0.6,
+      lower: true,
+      cue: 'Feet mid-platform, knees track the toes.',
+    ),
+    Exercise(
+      'smith_squat',
+      'Smith Machine Squat',
+      Pattern.squat,
+      place: TrainingPlace.gym,
+      ratio: 0.45,
+      lower: true,
+      cue: 'Feet a little forward, chest up.',
+    ),
+    Exercise(
+      'deadlift',
+      'Deadlift',
+      Pattern.hinge,
+      place: TrainingPlace.gym,
+      ratio: 0.7,
+      lower: true,
+      cue: 'Bar over mid-foot, push the floor away.',
+    ),
+    Exercise(
+      'trap_bar_deadlift',
+      'Trap Bar Deadlift',
+      Pattern.hinge,
+      place: TrainingPlace.gym,
+      ratio: 0.75,
+      lower: true,
+      cue: 'Hips and chest rise together.',
+    ),
+    Exercise(
+      'kb_swing',
+      'Kettlebell Swing',
+      Pattern.hinge,
+      place: TrainingPlace.gym,
+      ratio: 0.2,
+      lower: true,
+      dumbbell: true,
+      cue: 'Snap the hips; the arms only guide.',
+    ),
+    Exercise(
+      'bulgarian_db',
+      'Dumbbell Bulgarian Split Squat',
+      Pattern.lunge,
+      place: TrainingPlace.gym,
+      ratio: 0.1,
+      lower: true,
+      dumbbell: true,
+      cue: 'Rear foot on the bench, front shin upright.',
+    ),
+    Exercise(
+      'db_step_up',
+      'Dumbbell Step-up',
+      Pattern.lunge,
+      place: TrainingPlace.gym,
+      ratio: 0.1,
+      lower: true,
+      dumbbell: true,
+      cue: 'Drive through the front heel.',
+    ),
+    Exercise(
+      'incline_db_press',
+      'Incline Dumbbell Press',
+      Pattern.pushHorizontal,
+      place: TrainingPlace.gym,
+      ratio: 0.13,
+      dumbbell: true,
+      cue: 'Bench at 30°, elbows at 45°.',
+    ),
+    Exercise(
+      'machine_chest_press',
+      'Machine Chest Press',
+      Pattern.pushHorizontal,
+      place: TrainingPlace.gym,
+      ratio: 0.4,
+      cue: 'Handles at mid-chest, slow on the way back.',
+    ),
+    Exercise(
+      'gym_pushup',
+      'Push-up',
+      Pattern.pushHorizontal,
+      place: TrainingPlace.gym,
+      cue: 'Body in one line, chest to the floor.',
+    ),
+    Exercise(
+      'machine_shoulder_press',
+      'Machine Shoulder Press',
+      Pattern.pushVertical,
+      place: TrainingPlace.gym,
+      ratio: 0.25,
+      cue: 'Seat so the handles start at the shoulders.',
+    ),
+    Exercise(
+      'arnold_press',
+      'Arnold Press',
+      Pattern.pushVertical,
+      place: TrainingPlace.gym,
+      ratio: 0.08,
+      dumbbell: true,
+      cue: 'Turn the palms out as you press.',
+    ),
+    Exercise(
+      'one_arm_db_row',
+      'One-arm Dumbbell Row',
+      Pattern.pullHorizontal,
+      place: TrainingPlace.gym,
+      ratio: 0.2,
+      dumbbell: true,
+      cue: 'Pull to the hip, not the chest.',
+    ),
+    Exercise(
+      'chest_supported_row',
+      'Chest-supported Row',
+      Pattern.pullHorizontal,
+      place: TrainingPlace.gym,
+      ratio: 0.35,
+      cue: 'Chest on the pad, squeeze the shoulder blades.',
+    ),
+    Exercise(
+      'inverted_row',
+      'Inverted Row',
+      Pattern.pullHorizontal,
+      place: TrainingPlace.gym,
+      cue: 'Bar at hip height, body straight.',
+    ),
+    Exercise(
+      'pullup',
+      'Pull-up',
+      Pattern.pullVertical,
+      place: TrainingPlace.gym,
+      cue: 'From a dead hang, chin over the bar.',
+    ),
+    Exercise(
+      'close_grip_pulldown',
+      'Close-grip Pulldown',
+      Pattern.pullVertical,
+      place: TrainingPlace.gym,
+      ratio: 0.4,
+      cue: 'Lean back a little, elbows to the ribs.',
+    ),
+    Exercise(
+      'hammer_curl',
+      'Hammer Curl',
+      Pattern.arms,
+      place: TrainingPlace.gym,
+      ratio: 0.08,
+      dumbbell: true,
+      cue: 'Thumbs up, elbows still.',
+    ),
+    Exercise(
+      'overhead_triceps',
+      'Overhead Triceps Extension',
+      Pattern.arms,
+      place: TrainingPlace.gym,
+      ratio: 0.12,
+      dumbbell: true,
+      cue: 'Elbows forward, full stretch.',
+    ),
+    Exercise(
+      'ez_curl',
+      'EZ-bar Curl',
+      Pattern.arms,
+      place: TrainingPlace.gym,
+      ratio: 0.2,
+      cue: 'No swinging; lower slowly.',
+    ),
+    Exercise(
+      'leg_extension',
+      'Leg Extension',
+      Pattern.legs,
+      place: TrainingPlace.gym,
+      ratio: 0.3,
+      lower: true,
+      cue: 'Pause with the legs straight.',
+    ),
+    Exercise(
+      'seated_leg_curl',
+      'Seated Leg Curl',
+      Pattern.legs,
+      place: TrainingPlace.gym,
+      ratio: 0.3,
+      lower: true,
+      cue: 'Hips down, curl all the way.',
+    ),
+    Exercise(
+      'hanging_knee_raise',
+      'Hanging Knee Raise',
+      Pattern.core,
+      place: TrainingPlace.gym,
+      cue: 'Curl the hips up, no swinging.',
+    ),
+    Exercise(
+      'ab_wheel',
+      'Ab Wheel Rollout',
+      Pattern.core,
+      place: TrainingPlace.gym,
+      cue: 'Only as far as the back stays flat.',
     ),
     Exercise(
       'bike_intervals',
@@ -603,6 +838,16 @@ abstract final class ExerciseCatalog {
     return null;
   }
 
+  /// What [current] can be swapped for: the same movement in the same
+  /// place, the rest of the catalogue's way to train it.
+  static List<Exercise> alternatives(Exercise current) => [
+    for (final e in all)
+      if (e.pattern == current.pattern &&
+          e.place == current.place &&
+          e.id != current.id)
+        e,
+  ];
+
   /// The rungs of a home ladder, easiest first.
   static List<Exercise> ladder(String name) =>
       all.where((e) => e.ladder == name).toList()
@@ -637,10 +882,19 @@ class PlannedExercise {
     required this.max,
     this.kg,
     this.change = 0,
+    this.slot = '',
+    this.swapped = false,
   });
 
   final Exercise exercise;
   final int sets;
+
+  /// Its place in the session's template, which a swap is kept against:
+  /// "squat:0".
+  final String slot;
+
+  /// The user's choice rather than the plan's.
+  final bool swapped;
 
   /// Reps (or seconds) to aim between.
   final int min;
@@ -823,6 +1077,15 @@ abstract final class TrainingPlanner {
         .toList();
     if (options.isEmpty) return null;
 
+    // The user's own choice for this slot, if it still fits it.
+    final slot = '${pattern.name}:$variant';
+    final chosen = training.swaps[slot];
+    final swap = chosen == null ? null : ExerciseCatalog.tryId(chosen);
+    final swapped =
+        swap != null && swap.pattern == pattern && swap.place == training.place
+        ? swap
+        : null;
+
     final level = training.level;
     final sets = switch (level) {
       TrainingLevel.beginner => 3,
@@ -832,7 +1095,9 @@ abstract final class TrainingPlanner {
 
     if (pattern == Pattern.conditioning) {
       return PlannedExercise(
-        exercise: options.first,
+        exercise: swapped ?? options.first,
+        slot: slot,
+        swapped: swapped != null,
         sets: switch (level) {
           TrainingLevel.beginner => 6,
           TrainingLevel.intermediate => 8,
@@ -850,21 +1115,43 @@ abstract final class TrainingPlanner {
         sets: sets,
         level: level,
         history: history,
+        slot: slot,
+        swapped: swapped,
       );
     }
 
-    final exercise = options[variant.clamp(0, options.length - 1)];
+    final exercise = swapped ?? options[variant.clamp(0, options.length - 1)];
     final compound = !{
       Pattern.arms,
       Pattern.legs,
       Pattern.core,
     }.contains(pattern);
     if (exercise.measure == Measure.seconds) {
-      return PlannedExercise(exercise: exercise, sets: 3, min: 30, max: 60);
+      return PlannedExercise(
+        exercise: exercise,
+        sets: 3,
+        min: 30,
+        max: 60,
+        slot: slot,
+        swapped: swapped != null,
+      );
     }
     final (min, max) = compound ? (gaining ? (6, 10) : (8, 12)) : (10, 15);
+    // Body weight only (pull-ups, push-ups): the reps climb, no load.
+    if (!exercise.loaded) {
+      return PlannedExercise(
+        exercise: exercise,
+        sets: sets,
+        min: math.max(3, min - 2),
+        max: max + 3,
+        slot: slot,
+        swapped: swapped != null,
+      );
+    }
     final (kg, change) = _load(exercise, body, level, history, min, max);
     return PlannedExercise(
+      slot: slot,
+      swapped: swapped != null,
       exercise: exercise,
       sets: sets,
       min: min,
@@ -880,24 +1167,33 @@ abstract final class TrainingPlanner {
     required int sets,
     required TrainingLevel level,
     required List<SetLog> history,
+    required String slot,
+    Exercise? swapped,
   }) {
     // The ladder for this pattern; variant picks between ladders where a
-    // pattern has two.
+    // pattern has two. A swapped exercise brings its own ladder, and starts
+    // on its own rung.
     final ladders = {for (final e in options) ?e.ladder}.toList();
-    final ladderName = ladders.isEmpty
-        ? null
-        : ladders[variant.clamp(0, ladders.length - 1)];
+    final ladderName =
+        swapped?.ladder ??
+        (ladders.isEmpty
+            ? null
+            : ladders[variant.clamp(0, ladders.length - 1)]);
     final rungs = ladderName == null
         ? options
         : ExerciseCatalog.ladder(ladderName);
 
     // Where the user stands on the ladder: the last rung trained, moved up
     // when it was mastered; otherwise a start by level.
-    var rung = switch (level) {
-      TrainingLevel.beginner => 0,
-      TrainingLevel.intermediate => 1,
-      TrainingLevel.advanced => 2,
-    }.clamp(0, rungs.length - 1);
+    var rung =
+        (swapped != null && rungs.contains(swapped)
+                ? rungs.indexOf(swapped)
+                : switch (level) {
+                    TrainingLevel.beginner => 0,
+                    TrainingLevel.intermediate => 1,
+                    TrainingLevel.advanced => 2,
+                  })
+            .clamp(0, rungs.length - 1);
     for (var i = rungs.length - 1; i >= 0; i--) {
       final sessions = _sessions(history, rungs[i].id);
       if (sessions.isEmpty) continue;
@@ -911,6 +1207,8 @@ abstract final class TrainingPlanner {
     final exercise = rungs[rung];
     final seconds = exercise.measure == Measure.seconds;
     return PlannedExercise(
+      slot: slot,
+      swapped: swapped != null,
       exercise: exercise,
       sets: sets,
       min: seconds ? 20 : 8,

@@ -3,6 +3,7 @@ import 'package:halo/domain/body_profile.dart';
 import 'package:halo/domain/meal_plan.dart';
 import 'package:halo/domain/nutrition.dart';
 import 'package:halo/domain/training.dart';
+import 'package:halo/domain/warm_up.dart';
 
 void main() {
   const body = BodyProfile(
@@ -29,6 +30,96 @@ void main() {
       expect(squat.exercise.id, 'back_squat');
       expect(squat.kg, 40); // 80 × 0.5, beginner
       expect(squat.sets, 3);
+    });
+
+    test('a swapped exercise takes its slot in every session', () {
+      final plain = TrainingPlanner.week(
+        training: const TrainingProfile(),
+        body: body,
+        goal: const WeightGoal(),
+        history: const [],
+      );
+      final squat = plain.first.exercises.first;
+      expect(squat.slot, 'squat:0');
+      final alternatives = ExerciseCatalog.alternatives(squat.exercise);
+      expect(alternatives.map((e) => e.id), contains('goblet_squat'));
+      expect(alternatives.every((e) => e.pattern == Pattern.squat), isTrue);
+
+      final swapped = TrainingPlanner.week(
+        training: const TrainingProfile().swapped('squat:0', 'goblet_squat'),
+        body: body,
+        goal: const WeightGoal(),
+        history: const [],
+      );
+      // Full Body A is on Monday and Friday: both have the goblet squat.
+      for (final s in swapped.where((s) => s.title == 'Full Body A')) {
+        final e = s.exercises.first;
+        expect(e.exercise.id, 'goblet_squat');
+        expect(e.swapped, isTrue);
+        expect(e.kg, 15); // 80 × 0.2 = 16, in the 5 kg steps legs move in
+      }
+      // And back again.
+      final back = const TrainingProfile()
+          .swapped('squat:0', 'goblet_squat')
+          .swapped('squat:0', null);
+      expect(back.swaps, isEmpty);
+    });
+
+    test('body-weight swaps at the gym climb in reps, without a load', () {
+      final week = TrainingPlanner.week(
+        training: const TrainingProfile().swapped('pullVertical:0', 'pullup'),
+        body: body,
+        goal: const WeightGoal(),
+        history: const [],
+      );
+      final pull = week[1].exercises.firstWhere(
+        (e) => e.exercise.pattern == Pattern.pullVertical,
+      );
+      expect(pull.exercise.id, 'pullup');
+      expect(pull.kg, isNull);
+    });
+
+    test('swaps survive a round trip', () {
+      final profile = const TrainingProfile().swapped('hinge:1', 'deadlift');
+      final back = TrainingProfile.fromJson(profile.toJson());
+      expect(back.swaps, {'hinge:1': 'deadlift'});
+    });
+
+    test('warm-up sets climb to the working load, from the bar', () {
+      final squat = PlannedExercise(
+        exercise: ExerciseCatalog.byId('back_squat'),
+        sets: 3,
+        min: 8,
+        max: 12,
+        kg: 80,
+      );
+      final sets = WarmUp.sets(squat, step: 5);
+      expect(sets.first.kg, 20);
+      expect(sets.map((s) => s.kg), [20, 30, 50, 65]);
+      expect(sets.every((s) => s.kg < 80), isTrue);
+      // Light or small lifts need none.
+      final curl = PlannedExercise(
+        exercise: ExerciseCatalog.byId('db_curl'),
+        sets: 3,
+        min: 10,
+        max: 15,
+        kg: 8,
+      );
+      expect(WarmUp.sets(curl), isEmpty);
+    });
+
+    test('the general warm-up suits the session', () {
+      final week = TrainingPlanner.week(
+        training: TrainingProfile(weekdays: TrainingProfile.defaultDays(4)),
+        body: body,
+        goal: const WeightGoal(),
+        history: const [],
+      );
+      final upper = WarmUp.general(week.first, TrainingPlace.gym);
+      expect(upper.map((m) => m.name), contains('Arm circles'));
+      expect(upper.map((m) => m.name), isNot(contains('Leg swings')));
+      final lower = WarmUp.general(week[1], TrainingPlace.gym);
+      expect(lower.map((m) => m.name), contains('Leg swings'));
     });
 
     test('four days split upper and lower; losing adds a finisher', () {
