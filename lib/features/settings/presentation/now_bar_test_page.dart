@@ -7,7 +7,7 @@ import '../../../shared/widgets/grouped_list.dart';
 import '../../../shared/widgets/halo_page.dart';
 
 /// A temporary check of what keeps the live workout out of Samsung's Now
-/// Bar: four test notifications, each one change from the next.
+/// Bar: test notifications, each one change from the next.
 class NowBarTestPage extends StatefulWidget {
   const NowBarTestPage({super.key});
 
@@ -27,6 +27,12 @@ class _NowBarTestPageState extends State<NowBarTestPage> {
     (2, 'As a workout', 'Category workout, no buttons'),
     (3, 'As a stopwatch', 'Category stopwatch, no buttons'),
     (4, 'Halo’s way', 'Workout, Pause button, running time'),
+    (
+      5,
+      'Navigation app’s code',
+      'Its own code, NotificationCompat, from a running service',
+    ),
+    (6, 'Test 1 from a service', 'Test 1, posted from a running service'),
   ];
 
   Future<void> _show(int variant) async {

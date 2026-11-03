@@ -53,9 +53,21 @@ object LiveActivityChannel {
             "test" -> {
                 val manager = context.getSystemService(NotificationManager::class.java)
                 val variant = (call.arguments as? Number)?.toInt() ?: 0
-                if (variant == 0) {
-                    manager?.cancel(WorkoutNotification.TEST_ID)
-                } else {
+                // One test at a time: the plain one and the service's go.
+                manager?.cancel(WorkoutNotification.TEST_ID)
+                context.stopService(Intent(context, NowBarTestService::class.java))
+                if (variant >= 5) {
+                    val intent = Intent(context, NowBarTestService::class.java)
+                        .putExtra(NowBarTestService.EXTRA_VARIANT, variant)
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+                    } catch (_: Exception) {
+                    }
+                } else if (variant != 0) {
                     manager?.notify(
                         WorkoutNotification.TEST_ID,
                         WorkoutNotification.test(context, variant),

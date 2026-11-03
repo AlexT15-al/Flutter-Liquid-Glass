@@ -76,6 +76,11 @@
             android:name=".WorkoutService"
             android:exported="false"
             android:foregroundServiceType="location|health" />
+        <!-- Now Bar test 5 and 6, from a foreground service. -->
+        <service
+            android:name=".NowBarTestService"
+            android:exported="false"
+            android:foregroundServiceType="location|health" />
         <service
             android:name=".SleepService"
             android:exported="false"
