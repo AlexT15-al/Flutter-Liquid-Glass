@@ -156,6 +156,20 @@ class StepTracker with WidgetsBindingObserver {
     }
   }
 
+  /// Listens to the counter afresh, for a reading straight away.
+  ///
+  /// Android does not tell an app in the background about steps, and when it
+  /// comes back to the front, tells it again only at the next step. A walk
+  /// taken with the app in a pocket would then be missing until the user
+  /// walked again with it open, or for good. Listening anew makes Android
+  /// report the count at once, and the walk comes in as the gap it was.
+  Future<void> _relisten() async {
+    final previous = _subscription;
+    _subscription = null;
+    await previous?.cancel();
+    _listen();
+  }
+
   /// Readings are handled one at a time, in arrival order. Handling one
   /// awaits storage, and a reading that arrived meanwhile must not see the
   /// open span half-written.
@@ -236,9 +250,7 @@ class StepTracker with WidgetsBindingObserver {
           if (latest != null) await _flush(upTo: latest);
         });
       case AppLifecycleState.resumed:
-        if (access.value == StepAccess.granted && _subscription == null) {
-          _listen();
-        }
+        if (access.value == StepAccess.granted) unawaited(_relisten());
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
         break;
